@@ -1,0 +1,51 @@
+{
+    "name": "Taman Teras Cafe",
+    "short_name": "Taman Teras",
+    "description": "Menu digital & point-of-sale Taman Teras Cafe. Scan QR di meja, pesan dan bayar QRIS.",
+    "lang": "id",
+    "dir": "ltr",
+    "start_url": "/",
+    "scope": "/",
+    "display": "standalone",
+    "orientation": "portrait",
+    "background_color": "#ffffff",
+    "theme_color": "#1e3a8a",
+    "categories": ["food", "business"],
+    "icons": [
+        {
+            "src": "/assets/icons/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/assets/icons/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/assets/icons/icon-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "Menu",
+            "url": "/",
+            "icons": [{ "src": "/assets/icons/icon-192.png", "sizes": "192x192" }]
+        },
+        {
+            "name": "Dashboard Kasir",
+            "url": "/owner/dashboard",
+            "icons": [{ "src": "/assets/icons/icon-192.png", "sizes": "192x192" }]
+        },
+        {
+            "name": "Laporan",
+            "url": "/owner/reports",
+            "icons": [{ "src": "/assets/icons/icon-192.png", "sizes": "192x192" }]
+        }
+    ]
+}

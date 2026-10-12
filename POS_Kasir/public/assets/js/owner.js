@@ -1,0 +1,273 @@
+let lastSeenOrderId = 0;
+let pollingInterval = null;
+let soundEnabled = true;
+let currentOrdersCache = [];
+let activeOrderFilter = 'all';
+let startWorkingLabel = 'Mulai Masak';
+let dashboardLoadInFlight = false;
+
+// Web Audio API Synthesizer (Bip/Chime Suara Bel Kasir)
+function playBeepSound() {
+  if (!soundEnabled) return;
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+
+    // 2-tone melodic chime
+    const now = ctx.currentTime;
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(587.33, now); // D5
+    osc1.frequency.setValueAtTime(880.00, now + 0.15); // A5
+    gain1.gain.setValueAtTime(0.3, now);
+    gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+    osc1.connect(gain1);
+    gain1.connect(ctx.destination);
+
+    osc1.start(now);
+    osc1.stop(now + 0.6);
+  } catch (e) {
+    console.log('Audio notification error:', e);
+  }
+}
+
+function initOwnerPolling(ownerTypes, workingLabel) {
+  if (workingLabel) {
+    startWorkingLabel = workingLabel;
+  }
+
+  loadDashboardData();
+
+  // Polling setiap 5 detik
+  pollingInterval = setInterval(() => {
+    checkNewOrdersPolling(ownerTypes);
+  }, 5000);
+
+  // Setup sound switch button
+  const soundBtn = document.getElementById('btnToggleSound');
+  if (soundBtn) {
+    soundBtn.addEventListener('click', () => {
+      soundEnabled = !soundEnabled;
+      soundBtn.innerHTML = soundEnabled ? '🔔 Audio: On' : '🔕 Audio: Mute';
+      soundBtn.classList.toggle('btn-primary', soundEnabled);
+      soundBtn.classList.toggle('btn-outline', !soundEnabled);
+      if (soundEnabled) playBeepSound();
+    });
+  }
+}
+
+async function loadDashboardData() {
+  // Cegah request tumpang tindih: polling 5 detik + klik tombol bisa memicu
+  // load bersamaan, dan respons yang telat bisa menimpa data yang lebih baru.
+  if (dashboardLoadInFlight) return;
+  dashboardLoadInFlight = true;
+
+  try {
+    const res = await fetch('/api/owner/orders');
+    const data = await res.json();
+    if (data.success) {
+      lastSeenOrderId = data.data.last_id || 0;
+      currentOrdersCache = data.data.orders || [];
+      renderKPIStats(data.data.stats);
+      renderOrderCards(currentOrdersCache);
+    }
+  } catch (e) {
+    console.error('Error fetching dashboard:', e);
+  } finally {
+    dashboardLoadInFlight = false;
+  }
+}
+
+async function checkNewOrdersPolling(ownerTypes) {
+  try {
+    const res = await fetch(`/api/orders/check-new?type=${encodeURIComponent(ownerTypes)}&last_id=${lastSeenOrderId}`);
+    const response = await res.json();
+
+    // ApiResponse::success() membungkus payload di dalam property "data".
+    const poll = response.data || {};
+
+    if (poll.has_new_order && poll.count > 0) {
+      lastSeenOrderId = poll.latest_id;
+      
+      // Bunyikan Audio Bip
+      playBeepSound();
+
+      // Notifikasi Toast
+      showToast(`⚡ ${poll.count} Pesanan Baru Masuk!`);
+
+      // Refresh Tampilan Dashboard
+      await loadDashboardData();
+    }
+  } catch (err) {
+    console.warn('Polling check failed:', err);
+  }
+}
+
+function renderKPIStats(stats) {
+  if (!stats) return;
+  const pendingEl = document.getElementById('kpiPending');
+  const cookingEl = document.getElementById('kpiCooking');
+  const doneEl = document.getElementById('kpiDone');
+  const revEl = document.getElementById('kpiRevenue');
+
+  if (pendingEl) pendingEl.innerText = stats.pending_count || 0;
+  if (cookingEl) cookingEl.innerText = stats.cooking_count || 0;
+  if (doneEl) doneEl.innerText = stats.done_today || 0;
+  if (revEl) revEl.innerText = formatRupiah(stats.revenue_today || 0);
+}
+
+function filterOrderStatus(status) {
+  activeOrderFilter = status;
+  document.querySelectorAll('.filter-chip').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.status === status);
+  });
+  renderOrderCards(currentOrdersCache);
+}
+
+function renderOrderCards(orders) {
+  const container = document.getElementById('ordersContainer');
+  if (!container) return;
+
+  const filtered = (activeOrderFilter === 'all') 
+    ? orders 
+    : orders.filter(o => o.item_status === activeOrderFilter);
+
+  if (!filtered || filtered.length === 0) {
+    container.innerHTML = `
+      <div style="text-align:center; padding:40px 20px; background:#fff; border-radius:16px; border:1px dashed #cbd5e1; grid-column:1/-1;">
+        <div style="font-size:2.5rem; margin-bottom:8px;">🍽️</div>
+        <h3 style="color:#64748b; font-size:1.1rem; font-weight:700;">Tidak ada antrean pesanan ${activeOrderFilter !== 'all' ? '(' + activeOrderFilter + ')' : 'aktif'}</h3>
+        <p style="color:#94a3b8; font-size:0.85rem; margin-top:2px;">Pesanan pelanggan yang masuk akan otomatis muncul di sini.</p>
+      </div>
+    `;
+    return;
+  }
+
+  let html = '';
+  filtered.forEach(order => {
+    const isDineIn = order.service_type === 'dine_in';
+    const statusBadge = {
+      'pending': '<span class="brand-badge" style="background:#fee2e2; color:#ef4444;">⏳ Menunggu</span>',
+      'cooking': '<span class="brand-badge" style="background:#fef3c7; color:#d97706;">🔥 Dimasak</span>',
+      'done': '<span class="brand-badge" style="background:#d1fae5; color:#059669;">✅ Selesai</span>'
+    }[order.item_status];
+
+    const paymentBadge = order.payment_status === 'paid' 
+      ? '<span class="brand-badge" style="background:#d1fae5; color:#059669;">LUNAS (' + order.payment_method.toUpperCase() + ')</span>'
+      : '<span class="brand-badge" style="background:#fee2e2; color:#dc2626;">BELUM BAYAR</span>';
+
+    html += `
+      <div class="order-card" id="card-item-${order.item_id}">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
+          <div>
+            <div style="font-weight:800; font-size:1.1rem; color:#1e293b;">
+              ${isDineIn ? '🍽️ Makan di Tempat' : '🛍️ Takeaway / Bungkus'}
+            </div>
+            <div style="font-size:0.78rem; color:#64748b; margin-top:2px;">
+              Inv: <strong>${order.invoice_number}</strong> &bull; ${order.customer_name}
+            </div>
+          </div>
+          <div>${statusBadge}</div>
+        </div>
+
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:12px; background:#f8fafc; border-radius:10px; margin-bottom:12px;">
+          <div>
+            <div style="font-weight:700; font-size:1rem; color:#0f172a;">${order.product_name}</div>
+            <div style="font-size:0.85rem; color:#64748b;">Jumlah: <strong style="color:#2563eb; font-size:1rem;">${order.quantity} porsi</strong></div>
+            ${order.category_name ? `<span class="brand-badge ${order.owner_type === 'minuman' ? 'badge-drink' : 'badge-food'}" style="font-size:0.65rem; padding:1px 6px;">${order.category_name}</span>` : ''}
+          </div>
+          <div style="text-align:right;">
+            <div style="font-weight:800; color:#0f172a; font-size:0.95rem;">${formatRupiah(order.subtotal)}</div>
+            <div style="margin-top:2px;">${paymentBadge}</div>
+          </div>
+        </div>
+
+        ${order.notes ? `<div style="font-size:0.8rem; background:#fffbeb; padding:6px 10px; border-radius:8px; margin-bottom:12px; color:#b45309;">📝 Catatan: ${order.notes}</div>` : ''}
+
+        <div style="display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;">
+          ${order.payment_status === 'unpaid' ? `
+            <button class="btn btn-warning btn-sm" onclick="confirmPayment(${order.sale_id})">
+              💵 Terima Bayar Kasir
+            </button>
+          ` : ''}
+          ${order.item_status === 'pending' ? `
+            <button class="btn btn-primary btn-sm" onclick="updateStatus(${order.item_id}, 'cooking')">
+              ${order.owner_type === 'minuman' ? '🥤' : '👨‍🍳'} ${startWorkingLabel}
+            </button>
+          ` : ''}
+          ${order.item_status === 'cooking' ? `
+            <button class="btn btn-success btn-sm" onclick="updateStatus(${order.item_id}, 'done')">
+              ✅ Tandai Selesai
+            </button>
+          ` : ''}
+        </div>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+}
+
+async function updateStatus(itemId, newStatus) {
+  try {
+    const res = await fetch('/api/owner/item/status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: itemId, status: newStatus })
+    });
+    const result = await res.json();
+    if (result.success) {
+      showToast(result.message);
+      loadDashboardData();
+    } else {
+      alert(result.message);
+    }
+  } catch (e) {
+    alert('Gagal update status: ' + e.message);
+  }
+}
+
+async function confirmPayment(saleId) {
+  if (!confirm('Konfirmasi pelanggan sudah membayar tunai / QRIS di kasir?')) return;
+  try {
+    const res = await fetch('/api/owner/payment/status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sale_id: saleId, payment_status: 'paid' })
+    });
+    const result = await res.json();
+    if (result.success) {
+      showToast('Status pembayaran berhasil diubah ke LUNAS');
+      loadDashboardData();
+    } else {
+      alert('Error: ' + result.message);
+    }
+  } catch (e) {
+    alert('Error: ' + e.message);
+  }
+}
+
+function formatRupiah(num) {
+  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num);
+}
+
+function showToast(msg) {
+  let container = document.getElementById('toastContainer');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toastContainer';
+    container.className = 'toast-container';
+    document.body.appendChild(container);
+  }
+
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.innerHTML = `<span>🔔</span> <span>${msg}</span>`;
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.remove();
+  }, 3500);
+}
