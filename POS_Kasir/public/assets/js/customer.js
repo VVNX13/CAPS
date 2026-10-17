@@ -1,5 +1,6 @@
 let cart = {}; // { productId: { id, name, price, qty, image, category_name } }
 let activeCategory = 'all';
+let checkoutInProgress = false;
 
 function initCustomerMenu() {
   renderCartBadge();
@@ -128,6 +129,7 @@ function applyFilters() {
 }
 
 function addToCart(id, name, price, image, category) {
+  if (checkoutInProgress) return;
   if (cart[id]) {
     cart[id].qty += 1;
   } else {
@@ -168,6 +170,11 @@ function renderCartBadge() {
   const countEl = document.getElementById('cartTotalCount');
   const amountEl = document.getElementById('cartTotalAmount');
   const bubble = document.getElementById('cartBadgeCount');
+
+  const headerBadge = document.getElementById('headerCartCount');
+  if (headerBadge) {
+    headerBadge.innerText = count;
+  }
 
   if (bar && countEl && amountEl) {
     if (count > 0) {
@@ -250,6 +257,7 @@ function setServiceType(type) {
 
 async function submitCheckout(e) {
   e.preventDefault();
+  if (checkoutInProgress) return;
 
   // Payments and stock reservation need the server, so never queue an order offline.
   if (!navigator.onLine) {
@@ -270,6 +278,8 @@ async function submitCheckout(e) {
   const notes = document.getElementById('order_notes')?.value.trim() || '';
 
   const submitBtn = document.getElementById('btnSubmitOrder');
+  if (!submitBtn) return;
+  checkoutInProgress = true;
   submitBtn.disabled = true;
   submitBtn.innerText = 'Mengirim Pesanan...';
 
@@ -301,11 +311,13 @@ async function submitCheckout(e) {
       alert('Gagal: ' + (firstError || result.message));
       submitBtn.disabled = false;
       submitBtn.innerText = 'Kirim Pesanan Sekarang 🚀';
+      checkoutInProgress = false;
     }
   } catch (err) {
     alert('Terjadi kesalahan koneksi server: ' + err.message);
     submitBtn.disabled = false;
     submitBtn.innerText = 'Kirim Pesanan Sekarang 🚀';
+    checkoutInProgress = false;
   }
 }
 

@@ -19,6 +19,7 @@ class CustomerMenuController extends Controller
             ->select('products.*')
             ->join('categories', 'products.category_id', '=', 'categories.id')
             ->where('products.is_active', 1)
+            ->where('products.stock', '>', 0)
             ->orderBy('categories.owner_type')
             ->orderBy('products.name')
             ->with('category')

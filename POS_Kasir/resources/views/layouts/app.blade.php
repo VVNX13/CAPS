@@ -8,7 +8,7 @@
     <title>@yield('title', config('app.name'))</title>
 
     <link rel="manifest" href="{{ asset_versioned('manifest.webmanifest') }}">
-    <meta name="theme-color" content="#1e3a8a">
+    <meta name="theme-color" content="#25382d">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">

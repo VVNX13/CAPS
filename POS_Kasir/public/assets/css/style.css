@@ -1,23 +1,26 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap');
 
 :root {
-  --primary: #2563eb;
-  --primary-dark: #1d4ed8;
-  --primary-light: #eff6ff;
-  --food-color: #f97316;
-  --food-light: #fff7ed;
-  --drink-color: #06b6d4;
-  --drink-light: #ecfeff;
-  --qris-red: #dc2626;
-  --qris-light: #fef2f2;
-  --success: #10b981;
-  --warning: #f59e0b;
-  --danger: #ef4444;
-  --bg-main: #f8fafc;
+  --primary: #25382d;
+  --primary-dark: #1b2820;
+  --primary-light: #dde6da;
+  --accent: #25382d;
+  --accent-hover: #496a50;
+  --accent-soft: #dde6da;
+  --food-color: #9b641c;
+  --food-light: #fff4df;
+  --drink-color: #2f7a4d;
+  --drink-light: #e6f2e8;
+  --qris-red: #ad3e39;
+  --qris-light: #fceceb;
+  --success: #2f7a4d;
+  --warning: #9b641c;
+  --danger: #ad3e39;
+  --bg-main: #f7f5ef;
   --card-bg: #ffffff;
-  --text-main: #0f172a;
-  --text-muted: #64748b;
-  --border-color: #e2e8f0;
+  --text-main: #252825;
+  --text-muted: #70756f;
+  --border-color: #d3dbd0;
   --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.08);
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   --shadow-lg: 0 10px 25px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
@@ -364,7 +367,7 @@ body {
 
 /* Hero Banner */
 .app-hero-banner {
-  background: linear-gradient(135deg, #1e3a8a, #2563eb, #3b82f6);
+  background: linear-gradient(135deg, #1b2820, #25382d, #364e3f);
   color: #fff;
   padding: 24px 16px;
   text-align: center;
@@ -1298,4 +1301,239 @@ body {
 @keyframes slideInDown {
   from { opacity: 0; transform: translateY(-20px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Open Design AROMA / Taman Cafe Elements ─── */
+.cafe-intro {
+  position: relative;
+  isolation: isolate;
+  min-height: 200px;
+  margin: 12px 0 24px;
+  border-radius: var(--radius-lg);
+  background: var(--accent);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
+.cafe-intro::before {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(37, 56, 45, 0.95) 0%, rgba(37, 56, 45, 0.82) 45%, rgba(37, 56, 45, 0.3) 80%, transparent 100%);
+}
+.cafe-intro-copy {
+  position: relative;
+  z-index: 2;
+  padding: 24px 30px;
+  max-width: 580px;
+}
+.cafe-intro figure {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  margin: 0;
+}
+.cafe-intro figure img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 51%;
+}
+.cafe-intro h1 {
+  font-size: clamp(1.6rem, 2.8vw, 2.2rem);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+.cafe-intro p {
+  margin-top: 6px;
+  font-size: 0.95rem;
+  opacity: 0.95;
+}
+.cafe-intro small {
+  display: block;
+  margin-top: 10px;
+  font-size: 0.78rem;
+  opacity: 0.85;
+}
+
+/* Sales Recommendations */
+.customer-rec-section {
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow-sm);
+}
+.rec-section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.rec-header-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  background: var(--primary-light);
+  color: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.rec-header-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text-main);
+  line-height: 1.25;
+}
+.rec-header-desc {
+  font-size: 0.825rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.rec-badge-highlight {
+  font-size: 0.725rem;
+  font-weight: 700;
+  color: var(--accent);
+  background: var(--primary-light);
+  border: 1px solid var(--border-color);
+  padding: 4px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+.rec-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+@media (max-width: 900px) {
+  .rec-cards-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+}
+@media (max-width: 600px) {
+  .rec-cards-grid { grid-template-columns: 1fr; gap: 12px; }
+  .customer-rec-section { padding: 14px; }
+  .cafe-intro-copy { padding: 18px; max-width: 90%; }
+}
+.rec-card {
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  position: relative;
+}
+.rec-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+  box-shadow: var(--shadow-md);
+}
+.rec-card-img-wrap {
+  width: 100%;
+  height: 135px;
+  position: relative;
+  overflow: hidden;
+  background: var(--primary-light);
+}
+.rec-card-img-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.25s ease;
+}
+.rec-card:hover .rec-card-img-wrap img {
+  transform: scale(1.05);
+}
+.rec-card-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: #ffffff;
+  color: var(--accent);
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  z-index: 2;
+}
+.rec-card-sales-pill {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background: rgba(37, 56, 45, 0.85);
+  backdrop-filter: blur(4px);
+  color: #ffffff;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  z-index: 2;
+}
+.rec-card-body {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  justify-content: space-between;
+  gap: 8px;
+}
+.rec-card-title {
+  font-size: 0.925rem;
+  font-weight: 700;
+  color: var(--text-main);
+  line-height: 1.3;
+}
+.rec-card-desc {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-top: 3px;
+}
+.rec-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border-color);
+}
+.rec-card-price {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--accent);
+}
+.rec-card-btn {
+  padding: 6px 12px;
+  background: var(--accent);
+  color: #ffffff;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+.rec-card-btn:hover {
+  opacity: 0.9;
 }
