@@ -20,6 +20,7 @@ return new class extends Migration
             $table->decimal('unit_price', 12, 2)->default(0.00);
             $table->decimal('subtotal', 12, 2)->default(0.00);
             $table->enum('item_status', ['pending', 'cooking', 'done'])->default('pending');
+            $table->string('notes', 255)->nullable();
             $table->timestamps();
 
             $table->index(['sale_id', 'item_status']);

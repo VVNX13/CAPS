@@ -174,9 +174,10 @@ function renderOrderCards(orders) {
 
         <div style="display:flex; align-items:center; justify-content:space-between; padding:12px; background:#f8fafc; border-radius:10px; margin-bottom:12px;">
           <div>
-            <div style="font-weight:700; font-size:1rem; color:#0f172a;">${order.product_name}</div>
+            <div style="font-weight:700; font-size:1rem; color:#0f172a;">${escapeHtml(order.product_name)}</div>
             <div style="font-size:0.85rem; color:#64748b;">Jumlah: <strong style="color:#2563eb; font-size:1rem;">${order.quantity} porsi</strong></div>
-            ${order.category_name ? `<span class="brand-badge ${order.owner_type === 'minuman' ? 'badge-drink' : 'badge-food'}" style="font-size:0.65rem; padding:1px 6px;">${order.category_name}</span>` : ''}
+            ${order.category_name ? `<span class="brand-badge ${order.owner_type === 'minuman' ? 'badge-drink' : 'badge-food'}" style="font-size:0.65rem; padding:1px 6px;">${escapeHtml(order.category_name)}</span>` : ''}
+            ${order.item_notes ? `<div class="order-item-note"><span>📝</span> <span>${escapeHtml(order.item_notes)}</span></div>` : ''}
           </div>
           <div style="text-align:right;">
             <div style="font-weight:800; color:#0f172a; font-size:0.95rem;">${formatRupiah(order.subtotal)}</div>
@@ -184,7 +185,7 @@ function renderOrderCards(orders) {
           </div>
         </div>
 
-        ${order.notes ? `<div style="font-size:0.8rem; background:#fffbeb; padding:6px 10px; border-radius:8px; margin-bottom:12px; color:#b45309;">📝 Catatan: ${order.notes}</div>` : ''}
+        ${order.notes ? `<div style="font-size:0.8rem; background:#fffbeb; padding:6px 10px; border-radius:8px; margin-bottom:12px; color:#b45309;">📝 Catatan Pesanan: ${escapeHtml(order.notes)}</div>` : ''}
 
         <div style="display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;">
           ${order.payment_status === 'unpaid' ? `
@@ -270,4 +271,14 @@ function showToast(msg) {
   setTimeout(() => {
     toast.remove();
   }, 3500);
+}
+
+function escapeHtml(value) {
+  if (value === null || value === undefined) return '';
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }

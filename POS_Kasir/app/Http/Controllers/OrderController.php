@@ -36,6 +36,7 @@ class OrderController extends Controller
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_id' => ['required', 'integer', 'exists:products,id'],
             'items.*.quantity' => ['required', 'integer', 'min:1'],
+            'items.*.notes' => ['nullable', 'string', 'max:255'],
         ], [
             'customer_name.required' => 'Nama pelanggan wajib diisi',
             'customer_name.max' => 'Nama pelanggan maksimal 100 karakter',
@@ -100,6 +101,7 @@ class OrderController extends Controller
                         'unit_price' => $unitPrice,
                         'subtotal' => $subtotal,
                         'item_status' => 'pending',
+                        'notes' => isset($item['notes']) && filled($item['notes']) ? Str::limit(trim((string) $item['notes']), 255) : null,
                     ];
                 }
 
@@ -192,6 +194,7 @@ class OrderController extends Controller
                     'quantity' => $item->quantity,
                     'unit_price' => (float) $item->unit_price,
                     'subtotal' => (float) $item->subtotal,
+                    'notes' => $item->notes,
                 ];
             });
 

@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Rules\IndonesianPhoneNumber;
 use App\Support\ApiResponse;
 use App\Support\PhoneNumber;
-use App\Rules\IndonesianPhoneNumber;
 use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
@@ -56,7 +56,7 @@ class CustomerHistoryController extends Controller
         $items = DB::table('sale_items as si')
             ->join('products as p', 'si.product_id', '=', 'p.id')
             ->whereIn('si.sale_id', $orders->pluck('id'))
-            ->select('si.sale_id', 'si.product_id', 'p.name as product_name', 'si.quantity', 'si.subtotal')
+            ->select('si.sale_id', 'si.product_id', 'p.name as product_name', 'si.quantity', 'si.subtotal', 'si.notes')
             ->orderBy('si.id')
             ->get()
             ->groupBy('sale_id');
@@ -84,6 +84,7 @@ class CustomerHistoryController extends Controller
                     'product_name' => $i->product_name,
                     'quantity' => (int) $i->quantity,
                     'subtotal' => (float) $i->subtotal,
+                    'notes' => $i->notes,
                 ])->values(),
             ];
         })->values();

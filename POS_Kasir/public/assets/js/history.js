@@ -100,13 +100,16 @@ function renderHistoryOrders(orders) {
         const service = order.service_type === 'dine_in' ? '🍽️ Makan di Tempat' : '🛍️ Bungkus';
 
         const items = order.items.map((i) => `
-            <li style="display:flex; justify-content:space-between; gap:8px; font-size:0.83rem; color:#475569;">
-                <span>${escapeHtml(i.product_name)} &times; ${i.quantity}</span>
+            <li style="display:flex; justify-content:space-between; gap:8px; font-size:0.83rem; color:#475569; margin-bottom:4px;">
+                <div>
+                    <span>${escapeHtml(i.product_name)} &times; ${i.quantity}</span>
+                    ${i.notes ? `<div style="font-size:0.72rem; color:#92400e; background:#fef3c7; display:inline-block; padding:1px 5px; border-radius:4px; margin-top:2px;">📝 ${escapeHtml(i.notes)}</div>` : ''}
+                </div>
                 <span style="font-weight:700; color:#0f172a;">${formatRupiah(i.subtotal)}</span>
             </li>`).join('');
 
         const reorderItems = encodeURIComponent(JSON.stringify(
-            order.items.map((i) => ({ product_id: i.product_id, quantity: i.quantity }))
+            order.items.map((i) => ({ product_id: i.product_id, quantity: i.quantity, notes: i.notes || '' }))
         ));
 
         return `

@@ -46,6 +46,7 @@ function applyReorderFromUrl() {
       qty: Math.max(1, parseInt(entry.quantity, 10) || 1),
       image: product.image,
       category: product.category,
+      notes: entry.notes || '',
     };
     added += 1;
   });
@@ -104,7 +105,11 @@ function filterMenuSearch() {
 
 function applyFilters() {
   const searchTerm = (document.getElementById('menuSearchInput')?.value || '').toLowerCase().trim();
-  const cards = document.querySelectorAll('.card-product');
+  const sortMode = document.getElementById('menuSortSelect')?.value || 'default';
+  const grid = document.getElementById('productGrid');
+  if (!grid) return;
+
+  const cards = Array.from(grid.querySelectorAll('.card-product'));
   let visibleCount = 0;
 
   cards.forEach(card => {
@@ -122,6 +127,21 @@ function applyFilters() {
     }
   });
 
+  cards.sort((a, b) => {
+    if (sortMode === 'price_asc') {
+      return (parseFloat(a.dataset.price) || 0) - (parseFloat(b.dataset.price) || 0);
+    }
+    if (sortMode === 'price_desc') {
+      return (parseFloat(b.dataset.price) || 0) - (parseFloat(a.dataset.price) || 0);
+    }
+    if (sortMode === 'name_asc') {
+      return (a.dataset.name || '').localeCompare(b.dataset.name || '');
+    }
+    return (parseInt(a.dataset.order, 10) || 0) - (parseInt(b.dataset.order, 10) || 0);
+  });
+
+  cards.forEach(card => grid.appendChild(card));
+
   const emptyState = document.getElementById('emptySearchState');
   if (emptyState) {
     emptyState.style.display = (visibleCount === 0) ? 'block' : 'none';
@@ -133,7 +153,7 @@ function addToCart(id, name, price, image, category) {
   if (cart[id]) {
     cart[id].qty += 1;
   } else {
-    cart[id] = { id, name, price: parseFloat(price), qty: 1, image, category };
+    cart[id] = { id, name, price: parseFloat(price), qty: 1, image, category, notes: '' };
   }
 
   // Mobile haptic vibration if supported
@@ -143,6 +163,12 @@ function addToCart(id, name, price, image, category) {
 
   renderCartBadge();
   showToast(`"${name}" ditambahkan ke keranjang`);
+}
+
+function updateCartItemNote(id, noteText) {
+  if (cart[id]) {
+    cart[id].notes = noteText;
+  }
 }
 
 function updateCartQty(id, delta) {
@@ -230,16 +256,25 @@ function renderCartModalItems() {
   let html = '';
   items.forEach(item => {
     html += `
-      <div class="cart-item-row">
-        <div class="cart-item-info">
-          <div class="cart-item-name">${item.name}</div>
-          <div class="cart-item-unit-price">${formatRupiah(item.price)}</div>
+      <div class="cart-item-card">
+        <div class="cart-item-row">
+          <div class="cart-item-info">
+            <div class="cart-item-name">${escapeHtml(item.name)}</div>
+            <div class="cart-item-unit-price">${formatRupiah(item.price)}</div>
+          </div>
+          <div class="cart-item-controls">
+            <button type="button" class="btn-qty" onclick="updateCartQty(${item.id}, -1)">&minus;</button>
+            <span class="cart-item-qty">${item.qty}</span>
+            <button type="button" class="btn-qty" onclick="updateCartQty(${item.id}, 1)">&plus;</button>
+            <span class="cart-item-subtotal">${formatRupiah(item.price * item.qty)}</span>
+          </div>
         </div>
-        <div class="cart-item-controls">
-          <button type="button" class="btn-qty" onclick="updateCartQty(${item.id}, -1)">&minus;</button>
-          <span class="cart-item-qty">${item.qty}</span>
-          <button type="button" class="btn-qty" onclick="updateCartQty(${item.id}, 1)">&plus;</button>
-          <span class="cart-item-subtotal">${formatRupiah(item.price * item.qty)}</span>
+        <div class="cart-item-note-wrap">
+          <input type="text" class="cart-item-note-input"
+                 placeholder="📝 Catatan item (misal: less sugar, pedas, dll)..."
+                 value="${escapeHtml(item.notes || '')}"
+                 oninput="updateCartItemNote(${item.id}, this.value)"
+                 maxlength="200">
         </div>
       </div>
     `;
@@ -265,7 +300,11 @@ async function submitCheckout(e) {
     return;
   }
 
-  const items = Object.values(cart).map(i => ({ product_id: i.id, quantity: i.qty }));
+  const items = Object.values(cart).map(i => ({
+    product_id: i.id,
+    quantity: i.qty,
+    notes: (i.notes || '').trim()
+  }));
   if (items.length === 0) {
     alert('Silakan pilih menu terlebih dahulu!');
     return;
@@ -342,4 +381,14 @@ function showToast(msg) {
   setTimeout(() => {
     toast.remove();
   }, 3000);
+}
+
+function escapeHtml(value) {
+  if (value === null || value === undefined) return '';
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }

@@ -135,4 +135,42 @@ class CheckoutTest extends TestCase
 
         $this->assertSame(['Es Kopi'], $names);
     }
+
+    public function test_checkout_saves_and_displays_item_notes(): void
+    {
+        $drinkCategory = Category::factory()->minuman()->create();
+        $drink = Product::factory()->create(['category_id' => $drinkCategory->id, 'name' => 'Kopi Tubruk', 'price' => 15000, 'stock' => 10]);
+
+        $response = $this->postJson('/api/orders/checkout', [
+            'customer_name' => 'Devano',
+            'customer_phone' => '081234567890',
+            'service_type' => 'dine_in',
+            'payment_method' => 'cash',
+            'items' => [
+                [
+                    'product_id' => $drink->id,
+                    'quantity' => 1,
+                    'notes' => 'Less sugar, panas',
+                ],
+            ],
+        ]);
+
+        $response->assertCreated()->assertJsonPath('success', true);
+
+        $sale = Sale::firstOrFail();
+        $item = $sale->items->first();
+        $this->assertSame('Less sugar, panas', $item->notes);
+
+        // Check receipt displays the note
+        $this->get('/receipt/'.$sale->invoice_number)
+            ->assertOk()
+            ->assertSee('Less sugar, panas');
+
+        // Check owner API includes the item note
+        $owner = User::factory()->ownerMinuman()->create();
+        $this->actingAs($owner)
+            ->getJson('/api/owner/orders')
+            ->assertOk()
+            ->assertJsonPath('data.orders.0.item_notes', 'Less sugar, panas');
+    }
 }

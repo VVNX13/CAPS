@@ -52,6 +52,7 @@ class OwnerDashboardController extends Controller
                 'si.unit_price',
                 'si.subtotal',
                 'si.item_status',
+                'si.notes as item_notes',
                 'si.created_at',
                 'p.name as product_name',
                 'p.image as product_image',

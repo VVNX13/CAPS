@@ -45,7 +45,7 @@ class ProductController extends Controller
                 'image' => $product->image,
                 // Pre-resolved so the browser never has to guess whether the
                 // value is a pasted URL or a storage path.
-                'image_url' => ProductImage::url($product->image),
+                'image_url' => ProductImage::url($product->image, $product->name),
                 'image_external' => ProductImage::isExternal($product->image),
                 'is_active' => (int) $product->is_active,
                 'category_name' => $product->category->name,

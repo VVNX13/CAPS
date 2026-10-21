@@ -106,10 +106,18 @@
             </div>
         </section>
 
-        <!-- Search Bar -->
+        <!-- Search & Sort Bar -->
         <div class="menu-search-wrapper">
-            <span class="search-icon">🔍</span>
-            <input type="text" id="menuSearchInput" class="menu-search-input" placeholder="Cari makanan, snack, atau minuman..." oninput="filterMenuSearch()">
+            <div class="menu-search-box">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="menuSearchInput" class="menu-search-input" placeholder="Cari makanan, snack, atau minuman..." oninput="filterMenuSearch()">
+            </div>
+            <select id="menuSortSelect" class="menu-sort-select" onchange="applyFilters()">
+                <option value="default">✨ Rekomendasi</option>
+                <option value="price_asc">💵 Harga: Termurah</option>
+                <option value="price_desc">💎 Harga: Termahal</option>
+                <option value="name_asc">🔤 Nama: A - Z</option>
+            </select>
         </div>
 
         <!-- Sticky Horizontal Category Scroll -->
@@ -131,29 +139,13 @@
             @foreach ($products as $product)
                 @php
                     $isFood = $product->category->owner_type === 'makanan';
-                    // Auto-assign high quality illustration if available
-                    $pName = strtolower($product->name);
-                    $assignedImg = null;
-                    if (str_contains($pName, 'gula aren') || str_contains($pName, 'aren')) {
-                        $assignedImg = 'ChatGPT-Image-Oct-2_-2026_-09_13_15-PM-2.png';
-                    } elseif (str_contains($pName, 'v60') || str_contains($pName, 'gayo') || str_contains($pName, 'americano')) {
-                        $assignedImg = 'ChatGPT-Image-Oct-2_-2026_-09_13_16-PM-3.png';
-                    } elseif (str_contains($pName, 'matcha')) {
-                        $assignedImg = 'ChatGPT-Image-Oct-2_-2026_-09_13_17-PM-4.png';
-                    } elseif (str_contains($pName, 'nasi goreng')) {
-                        $assignedImg = 'ChatGPT-Image-Oct-2_-2026_-09_13_19-PM-5.png';
-                    } elseif (str_contains($pName, 'croissant') || str_contains($pName, 'sandwich') || str_contains($pName, 'ayam bakar')) {
-                        $assignedImg = 'ChatGPT-Image-Oct-2_-2026_-09_13_20-PM-6.png';
-                    } elseif (str_contains($pName, 'kentang') || str_contains($pName, 'truffle') || str_contains($pName, 'fries')) {
-                        $assignedImg = 'ChatGPT-Image-Oct-2_-2026_-09_13_21-PM-7.png';
-                    }
-
-                    $imageUrl = $assignedImg ? asset('assets/images/' . $assignedImg) : \App\Services\ProductImage::url($product->image);
+                    $imageUrl = \App\Services\ProductImage::url($product->image, $product->name);
                 @endphp
-                <div class="card-product" data-category="{{ $product->category_id }}" data-name="{{ \Illuminate\Support\Str::lower($product->name) }}">
+                <div class="card-product" data-category="{{ $product->category_id }}" data-name="{{ \Illuminate\Support\Str::lower($product->name) }}" data-price="{{ (float) $product->price }}" data-order="{{ $loop->index }}">
                     <div class="card-product-img-wrapper">
                         @if ($imageUrl)
-                            <img src="{{ $imageUrl }}" alt="{{ $product->name }}" class="card-product-img" loading="lazy">
+                            <img src="{{ $imageUrl }}" alt="{{ $product->name }}" class="card-product-img" loading="lazy"
+                                 onerror="this.style.opacity='0';">
                         @else
                             <div class="card-product-img card-product-img-placeholder {{ $isFood ? 'ph-food' : 'ph-drink' }}"
                                  role="img" aria-label="{{ $product->name }}">
@@ -264,11 +256,6 @@
                                pattern="0[0-9]{8,13}" title="Masukkan nomor Indonesia, contoh 081234567890"
                                required>
                         <small class="form-hint">Dipakai untuk kirim struk &amp; kalau ada pesanan yang belum dibayar.</small>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Catatan Tambahan (Opsional)</label>
-                        <textarea id="order_notes" class="form-control" rows="2" placeholder="Contoh: Es sedikit, sambal dipisah..."></textarea>
                     </div>
 
                     <!-- Metode Pembayaran -->

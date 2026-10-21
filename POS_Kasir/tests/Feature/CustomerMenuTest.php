@@ -32,7 +32,7 @@ class CustomerMenuTest extends TestCase
     }
 
     /* ---------------------------------------------------------------- */
-    /* Description copy                                                  */
+    /* Description copy */
     /* ---------------------------------------------------------------- */
 
     public function test_no_filler_description_is_invented_for_empty_products(): void
@@ -95,5 +95,17 @@ class CustomerMenuTest extends TestCase
     public function test_unknown_route_returns_404(): void
     {
         $this->get('/halaman-yang-tidak-ada')->assertNotFound();
+    }
+
+    public function test_menu_has_sort_controls_and_attributes(): void
+    {
+        Category::factory()->makanan()->create();
+        Product::factory()->create(['name' => 'Ayam Geprek', 'price' => 20000]);
+
+        $html = $this->get('/')->assertOk()->getContent();
+
+        $this->assertStringContainsString('id="menuSortSelect"', $html);
+        $this->assertStringContainsString('data-price="20000"', $html);
+        $this->assertStringContainsString('data-order="0"', $html);
     }
 }

@@ -39,7 +39,7 @@ class ProductImage
     /**
      * The public URL used in the page, or null when the owner pasted a URL.
      */
-    public static function url(?string $image): ?string
+    public static function url(?string $image, ?string $name = null): ?string
     {
         $image = trim((string) $image);
 
@@ -48,10 +48,46 @@ class ProductImage
         }
 
         if (self::isExternal($image)) {
+            if ($name && str_contains($image, 'unsplash.com')) {
+                $local = self::localIllustrationFor($name);
+                if ($local) {
+                    return $local;
+                }
+            }
             return $image;
         }
 
         return '/storage/'.$image;
+    }
+
+    public static function localIllustrationFor(string $name): ?string
+    {
+        $pName = strtolower($name);
+        if (str_contains($pName, 'gula aren') || str_contains($pName, 'aren') || str_contains($pName, 'caramel') || str_contains($pName, 'kopi')) {
+            return '/assets/images/ChatGPT-Image-Oct-2_-2026_-09_13_15-PM-2.png';
+        }
+        if (str_contains($pName, 'v60') || str_contains($pName, 'gayo') || str_contains($pName, 'americano') || str_contains($pName, 'berry') || str_contains($pName, 'sparkler') || str_contains($pName, 'jus') || str_contains($pName, 'alpukat') || str_contains($pName, 'mangga')) {
+            return '/assets/images/ChatGPT-Image-Oct-2_-2026_-09_13_16-PM-3.png';
+        }
+        if (str_contains($pName, 'matcha')) {
+            return '/assets/images/ChatGPT-Image-Oct-2_-2026_-09_13_17-PM-4.png';
+        }
+        if (str_contains($pName, 'nasi goreng')) {
+            return '/assets/images/ChatGPT-Image-Oct-2_-2026_-09_13_19-PM-5.png';
+        }
+        if (str_contains($pName, 'ayam bakar') || str_contains($pName, 'ayam') || str_contains($pName, 'croissant') || str_contains($pName, 'sandwich')) {
+            return '/assets/images/ChatGPT-Image-Oct-2_-2026_-09_13_20-PM-6.png';
+        }
+        if (str_contains($pName, 'mie') || str_contains($pName, 'seafood') || str_contains($pName, 'bakso')) {
+            return '/assets/images/ChatGPT-Image-Oct-2_-2026_-09_28_55-PM-1.png';
+        }
+        if (str_contains($pName, 'sop') || str_contains($pName, 'buntut') || str_contains($pName, 'soto')) {
+            return '/assets/images/ChatGPT-Image-Oct-2_-2026_-09_28_56-PM-2.png';
+        }
+        if (str_contains($pName, 'kentang') || str_contains($pName, 'truffle') || str_contains($pName, 'fries') || str_contains($pName, 'tahu') || str_contains($pName, 'cireng')) {
+            return '/assets/images/ChatGPT-Image-Oct-2_-2026_-09_13_21-PM-7.png';
+        }
+        return null;
     }
 
     public static function isExternal(?string $image): bool

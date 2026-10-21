@@ -395,10 +395,16 @@ body {
   opacity: 0.9;
 }
 
-/* Search Bar */
+/* Search & Sort Bar */
 .menu-search-wrapper {
-  position: relative;
+  display: flex;
+  gap: 10px;
+  align-items: center;
   margin: 8px 0 14px;
+}
+.menu-search-box {
+  position: relative;
+  flex: 1;
 }
 .search-icon {
   position: absolute;
@@ -423,6 +429,34 @@ body {
 .menu-search-input:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+.menu-sort-select {
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  background: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #334155;
+  outline: none;
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+.menu-sort-select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+@media (max-width: 540px) {
+  .menu-search-wrapper {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .menu-sort-select {
+    width: 100%;
+  }
 }
 
 /* Category Horizontal Scroll Tabs */
@@ -761,16 +795,54 @@ body {
 
 /* Cart Item Rows */
 .cart-items-scroll {
-  max-height: 220px;
+  max-height: 260px;
   overflow-y: auto;
   margin-bottom: 12px;
+}
+.cart-item-card {
+  padding: 8px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+.cart-item-card:last-child {
+  border-bottom: none;
 }
 .cart-item-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 0;
-  border-bottom: 1px solid #f1f5f9;
+}
+.cart-item-note-wrap {
+  margin-top: 6px;
+}
+.cart-item-note-input {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.775rem;
+  background: #f8fafc;
+  color: #334155;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+.cart-item-note-input:focus {
+  background: #fff;
+  border-color: var(--primary);
+  border-style: solid;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+.order-item-note {
+  margin-top: 6px;
+  font-size: 0.8rem;
+  background: #fef3c7;
+  color: #92400e;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 .cart-item-name {
   font-weight: 700;

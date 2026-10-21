@@ -156,6 +156,11 @@
                                     {{ ucfirst($item['owner_type']) }}
                                 </span>
                             </div>
+                            @if (!empty($item['notes']))
+                                <div style="font-size:0.725rem; color:#92400e; background:#fef3c7; padding:2px 6px; border-radius:4px; display:inline-block; margin-top:3px;">
+                                    📝 {{ $item['notes'] }}
+                                </div>
+                            @endif
                         </div>
                         <div style="font-weight:700; color:#0f172a;">{{ rupiah($item['subtotal']) }}</div>
                     </div>

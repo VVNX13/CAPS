@@ -148,7 +148,7 @@
 
         function productThumb(product) {
             if (product && product.image_url) {
-                return `<img src="${escapeHtml(product.image_url)}" alt="${escapeHtml(product.name)}" class="owner-prod-thumb">`;
+                return `<img src="${escapeHtml(product.image_url)}" alt="${escapeHtml(product.name)}" class="owner-prod-thumb" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='flex';"><div class="owner-prod-thumb" style="display:none; overflow:hidden;">${productFallback(product)}</div>`;
             }
 
             return `<div class="owner-prod-thumb" style="overflow:hidden;">${productFallback(product)}</div>`;
