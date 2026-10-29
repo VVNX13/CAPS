@@ -228,6 +228,8 @@ function renderOrderCards(orders) {
         ${order.notes ? `<div style="font-size:0.8rem; background:#fffbeb; padding:6px 10px; border-radius:8px; margin-bottom:12px; color:#b45309;">📝 Catatan Pesanan: ${escapeHtml(order.notes)}</div>` : ''}
 
         <div style="display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;">
+          <a class="btn btn-outline btn-sm" href="/receipt/${encodeURIComponent(order.invoice_number)}?print=1"
+             target="_blank" rel="noopener" title="Cetak struk thermal">🖨️ Struk</a>
           ${order.payment_status === 'unpaid' ? `
             <button class="btn btn-warning btn-sm" onclick="confirmPayment(${order.sale_id})">
               💵 Terima Bayar Kasir

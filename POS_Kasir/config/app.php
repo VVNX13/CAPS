@@ -16,6 +16,11 @@ return [
     'name' => env('APP_NAME', 'Laravel'),
 
     /*
+    | Alamat kafe, dicetak di kepala struk thermal.
+    */
+    'address' => env('APP_ADDRESS', 'Jl. Wijaya Kusuma No.54, Banta-Bantaeng, Makassar'),
+
+    /*
     |--------------------------------------------------------------------------
     | Application Environment
     |--------------------------------------------------------------------------

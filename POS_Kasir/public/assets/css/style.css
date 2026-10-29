@@ -1684,3 +1684,58 @@ body {
   color: #64748b;
   pointer-events: none;
 }
+
+/* ===== Struk thermal (58mm / 80mm) ===== */
+.print-controls {
+  display: flex;
+  gap: 8px;
+}
+.print-controls .form-control { width: auto; flex: 0 0 auto; }
+.print-controls .btn { flex: 1; }
+
+.thermal-print { display: none; }
+
+@media print {
+  html, body.bg-receipt {
+    background: #fff !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .navbar,
+  .receipt-container > *:not(.thermal-print) { display: none !important; }
+  .receipt-container {
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: none !important;
+  }
+
+  .thermal-print {
+    display: block;
+    width: 48mm; /* area cetak kertas 58mm */
+    padding: 2mm 0 6mm;
+    margin: 0 auto;
+    color: #000;
+    font-size: 8.5pt;
+    line-height: 1.35;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  html[data-paper="80"] .thermal-print {
+    width: 72mm; /* area cetak kertas 80mm */
+    font-size: 10pt;
+  }
+}
+
+.thermal-print .tp-center { text-align: center; }
+.thermal-print .tp-bold { font-weight: 700; }
+.thermal-print .tp-title { font-size: 1.25em; font-weight: 700; margin-bottom: 1mm; }
+.thermal-print .tp-line { border-top: 1px dashed #000; margin: 1.5mm 0; }
+.thermal-print .tp-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 2mm;
+}
+.thermal-print .tp-row > span:last-child { text-align: right; overflow-wrap: anywhere; }
+.thermal-print .tp-item { margin-bottom: 1mm; break-inside: avoid; }
+.thermal-print .tp-note { font-size: 0.9em; padding-left: 2mm; overflow-wrap: anywhere; }
+.thermal-print .tp-total { font-size: 1.2em; font-weight: 700; margin: 0.5mm 0; }
