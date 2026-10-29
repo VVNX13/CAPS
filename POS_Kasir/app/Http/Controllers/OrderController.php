@@ -31,6 +31,7 @@ class OrderController extends Controller
             'customer_phone' => ['required', 'string', 'max:25', new IndonesianPhoneNumber],
             'customer_email' => ['nullable', 'email', 'max:100'],
             'service_type' => ['required', 'in:dine_in,takeaway'],
+            'table_number' => ['nullable', 'string', 'max:10', 'regex:/^[A-Za-z0-9\- ]+$/'],
             'payment_method' => ['required', 'in:qris,cash'],
             'notes' => ['nullable', 'string'],
             'items' => ['required', 'array', 'min:1'],
@@ -44,6 +45,8 @@ class OrderController extends Controller
             'customer_email.email' => 'Format email pelanggan tidak valid',
             'service_type.required' => 'Pilih jenis layanan (dine in / takeaway)',
             'service_type.in' => 'Jenis layanan tidak valid',
+            'table_number.max' => 'Nomor meja maksimal 10 karakter',
+            'table_number.regex' => 'Nomor meja hanya boleh berisi huruf dan angka',
             'payment_method.required' => 'Pilih metode pembayaran',
             'payment_method.in' => 'Metode pembayaran tidak valid',
             'items.required' => 'Keranjang pesanan masih kosong',
@@ -55,6 +58,10 @@ class OrderController extends Controller
         // Store one canonical spelling so the same person is always matched to
         // their own orders, no matter how they typed the number.
         $data['customer_phone'] = PhoneNumber::normalize($data['customer_phone']);
+
+        // Nomor meja hanya berarti untuk makan di tempat; simpan dalam huruf besar agar mudah dicari.
+        $tableNumber = strtoupper(trim((string) ($data['table_number'] ?? '')));
+        $data['table_number'] = ($data['service_type'] === 'dine_in' && $tableNumber !== '') ? $tableNumber : null;
 
         $items = collect($data['items']);
         $productIds = $items->pluck('product_id')->unique()->values();
@@ -134,6 +141,7 @@ class OrderController extends Controller
                     'customer_phone' => $data['customer_phone'],
                     'customer_email' => $data['customer_email'] ?? null,
                     'service_type' => $data['service_type'],
+                    'table_number' => $data['table_number'],
                     'total_amount' => $totalAmount,
                     'qris_amount_total' => $qrisAmountTotal,
                     'payment_method' => $data['payment_method'],

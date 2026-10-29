@@ -1609,3 +1609,133 @@ body {
 .rec-card-btn:hover {
   opacity: 0.9;
 }
+/* Kalkulator Uang Kembalian (modal terima bayar tunai) */
+.cash-total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  background: #f8fafc;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  font-weight: 700;
+  color: #475569;
+}
+.cash-total-row strong { font-size: 1.3rem; font-weight: 800; color: #0f172a; }
+.cash-input-wrap { position: relative; }
+.cash-input-wrap span {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-weight: 700;
+  color: #64748b;
+  pointer-events: none;
+}
+.cash-input-wrap .form-control {
+  padding-left: 44px;
+  font-size: 1.25rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.cash-quick-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 16px;
+}
+.cash-change-box {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px;
+  border-radius: 12px;
+  background: #f1f5f9;
+  color: #475569;
+  font-weight: 700;
+}
+.cash-change-box strong { font-size: 1.5rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.cash-change-box.is-ok { background: #d1fae5; color: #065f46; }
+.cash-change-box.is-short { background: #fee2e2; color: #b91c1c; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Pencarian antrean pesanan */
+.order-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-bottom: 14px;
+}
+.order-search-icon {
+  position: absolute;
+  left: 12px;
+  font-size: 0.9rem;
+  pointer-events: none;
+}
+.order-search .form-control {
+  padding-left: 36px;
+  padding-right: 80px;
+}
+.order-search-count {
+  position: absolute;
+  right: 14px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #64748b;
+  pointer-events: none;
+}
+
+/* ===== Struk thermal (58mm / 80mm) ===== */
+.print-controls {
+  display: flex;
+  gap: 8px;
+}
+.print-controls .form-control { width: auto; flex: 0 0 auto; }
+.print-controls .btn { flex: 1; }
+
+.thermal-print { display: none; }
+
+@media print {
+  html, body.bg-receipt {
+    background: #fff !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .navbar,
+  .receipt-container > *:not(.thermal-print) { display: none !important; }
+  .receipt-container {
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: none !important;
+  }
+
+  .thermal-print {
+    display: block;
+    width: 48mm; /* area cetak kertas 58mm */
+    padding: 2mm 0 6mm;
+    margin: 0 auto;
+    color: #000;
+    font-size: 8.5pt;
+    line-height: 1.35;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  html[data-paper="80"] .thermal-print {
+    width: 72mm; /* area cetak kertas 80mm */
+    font-size: 10pt;
+  }
+}
+
+.thermal-print .tp-center { text-align: center; }
+.thermal-print .tp-bold { font-weight: 700; }
+.thermal-print .tp-title { font-size: 1.25em; font-weight: 700; margin-bottom: 1mm; }
+.thermal-print .tp-line { border-top: 1px dashed #000; margin: 1.5mm 0; }
+.thermal-print .tp-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 2mm;
+}
+.thermal-print .tp-row > span:last-child { text-align: right; overflow-wrap: anywhere; }
+.thermal-print .tp-item { margin-bottom: 1mm; break-inside: avoid; }
+.thermal-print .tp-note { font-size: 0.9em; padding-left: 2mm; overflow-wrap: anywhere; }
+.thermal-print .tp-total { font-size: 1.2em; font-weight: 700; margin: 0.5mm 0; }

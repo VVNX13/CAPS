@@ -240,6 +240,16 @@
                     </div>
                     <input type="hidden" id="service_type" value="dine_in">
 
+                    <div class="form-group" id="tableNumberGroup">
+                        <label class="form-label" for="table_number">Nomor Meja <span class="req-star">*</span></label>
+                        <input type="text" id="table_number" class="form-control"
+                               placeholder="Contoh: 5 atau A3"
+                               maxlength="10" autocomplete="off" inputmode="text"
+                               pattern="[A-Za-z0-9\- ]{1,10}" title="Nomor meja berupa huruf/angka, maksimal 10 karakter"
+                               required>
+                        <small class="form-hint">Lihat nomor yang tertempel di meja Anda.</small>
+                    </div>
+
                     <!-- Data Pelanggan -->
                     <h4 class="form-section-title">👤 Informasi Pemesan</h4>
 
