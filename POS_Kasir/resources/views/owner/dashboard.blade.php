@@ -84,6 +84,51 @@
         <!-- Order Cards Stream -->
         <div id="ordersContainer" class="orders-grid"></div>
     </main>
+
+    <!-- Modal Terima Bayar Tunai + Kalkulator Kembalian -->
+    <div class="modal-overlay" id="cashModal" onclick="if (event.target === this) closeCashModal()">
+        <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="cashModalTitle">
+            <div class="modal-sheet-handle"></div>
+
+            <div class="modal-header">
+                <div>
+                    <h3 id="cashModalTitle" style="font-size:1.15rem; font-weight:800; color:#0f172a;">💵 Terima Bayar Tunai</h3>
+                    <p id="cashModalInvoice" style="font-size:0.75rem; color:#64748b; margin-top:2px;"></p>
+                </div>
+                <button type="button" class="btn btn-outline modal-close-btn" onclick="closeCashModal()" aria-label="Tutup">&times;</button>
+            </div>
+
+            <form onsubmit="submitCashPayment(event)">
+                <div class="modal-body">
+                    <div class="cash-total-row">
+                        <span>Total Tagihan</span>
+                        <strong id="cashTotal">Rp 0</strong>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="cashReceived">Uang Diterima</label>
+                        <div class="cash-input-wrap">
+                            <span>Rp</span>
+                            <input type="text" id="cashReceived" class="form-control" inputmode="numeric"
+                                   autocomplete="off" placeholder="0" oninput="onCashInput(this)">
+                        </div>
+                    </div>
+
+                    <div id="cashQuickButtons" class="cash-quick-buttons"></div>
+
+                    <div id="cashChangeBox" class="cash-change-box">
+                        <span id="cashChangeLabel">Kembalian</span>
+                        <strong id="cashChange">Rp 0</strong>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" onclick="closeCashModal()">Batal</button>
+                    <button type="submit" id="btnCashSubmit" class="btn btn-success" disabled>✅ Konfirmasi Lunas</button>
+                </div>
+            </form>
+        </div>
+    </div>
 @endsection
 
 @push('scripts')

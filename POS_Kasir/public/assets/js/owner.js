@@ -230,8 +230,114 @@ async function updateStatus(itemId, newStatus) {
   }
 }
 
-async function confirmPayment(saleId) {
+// ===== Kalkulator Uang Kembalian (pembayaran tunai) =====
+let cashModalState = null; // { saleId, total }
+
+function confirmPayment(saleId) {
+  const order = currentOrdersCache.find(o => o.sale_id === saleId);
+
+  // Pesanan tunai: buka kalkulator kembalian. Selain itu cukup konfirmasi biasa.
+  if (order && order.payment_method === 'cash' && document.getElementById('cashModal')) {
+    openCashModal(order);
+    return;
+  }
+
   if (!confirm('Konfirmasi pelanggan sudah membayar tunai / QRIS di kasir?')) return;
+  markSalePaid(saleId);
+}
+
+function openCashModal(order) {
+  const total = Math.round(Number(order.total_amount) || 0);
+  cashModalState = { saleId: order.sale_id, total };
+
+  document.getElementById('cashModalInvoice').textContent =
+    `Inv: ${order.invoice_number} • ${order.customer_name}`;
+  document.getElementById('cashTotal').textContent = formatRupiah(total);
+
+  const input = document.getElementById('cashReceived');
+  input.value = '';
+
+  renderCashQuickButtons(total);
+  updateCashChange();
+
+  document.getElementById('cashModal').classList.add('active');
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => input.focus(), 50);
+}
+
+function closeCashModal() {
+  document.getElementById('cashModal').classList.remove('active');
+  document.body.style.overflow = '';
+  cashModalState = null;
+}
+
+// Saran nominal cepat: uang pas + pembulatan ke pecahan uang kertas umum.
+function renderCashQuickButtons(total) {
+  const amounts = [total];
+  [5000, 10000, 20000, 50000, 100000].forEach(step => {
+    const rounded = Math.ceil(total / step) * step;
+    if (rounded > total && !amounts.includes(rounded)) amounts.push(rounded);
+  });
+
+  document.getElementById('cashQuickButtons').innerHTML = amounts.slice(0, 5).map((amount, i) => `
+    <button type="button" class="btn btn-outline btn-sm" onclick="setCashReceived(${amount})">
+      ${i === 0 ? 'Uang Pas' : formatRupiah(amount)}
+    </button>
+  `).join('');
+}
+
+function parseCashValue(text) {
+  return Number(String(text).replace(/\D/g, '')) || 0;
+}
+
+function onCashInput(input) {
+  const value = parseCashValue(input.value);
+  input.value = value ? value.toLocaleString('id-ID') : '';
+  updateCashChange();
+}
+
+function setCashReceived(amount) {
+  document.getElementById('cashReceived').value = amount.toLocaleString('id-ID');
+  updateCashChange();
+}
+
+function updateCashChange() {
+  if (!cashModalState) return;
+
+  const received = parseCashValue(document.getElementById('cashReceived').value);
+  const diff = received - cashModalState.total;
+  const box = document.getElementById('cashChangeBox');
+  const enough = received > 0 && diff >= 0;
+
+  document.getElementById('cashChangeLabel').textContent = diff < 0 && received > 0 ? 'Uang Kurang' : 'Kembalian';
+  document.getElementById('cashChange').textContent = formatRupiah(received > 0 ? Math.abs(diff) : 0);
+  box.classList.toggle('is-short', received > 0 && diff < 0);
+  box.classList.toggle('is-ok', enough);
+  document.getElementById('btnCashSubmit').disabled = !enough;
+}
+
+async function submitCashPayment(e) {
+  e.preventDefault();
+  if (!cashModalState) return;
+
+  const received = parseCashValue(document.getElementById('cashReceived').value);
+  const change = received - cashModalState.total;
+  if (change < 0) return;
+
+  const btn = document.getElementById('btnCashSubmit');
+  btn.disabled = true;
+
+  const ok = await markSalePaid(cashModalState.saleId,
+    `Lunas • Kembalian ${formatRupiah(change)}`);
+
+  if (ok) {
+    closeCashModal();
+  } else {
+    btn.disabled = false;
+  }
+}
+
+async function markSalePaid(saleId, successMessage) {
   try {
     const res = await fetch('/api/owner/payment/status', {
       method: 'POST',
@@ -240,15 +346,20 @@ async function confirmPayment(saleId) {
     });
     const result = await res.json();
     if (result.success) {
-      showToast('Status pembayaran berhasil diubah ke LUNAS');
+      showToast(successMessage || 'Status pembayaran berhasil diubah ke LUNAS');
       loadDashboardData();
-    } else {
-      alert('Error: ' + result.message);
+      return true;
     }
+    alert('Error: ' + result.message);
   } catch (e) {
     alert('Error: ' + e.message);
   }
+  return false;
 }
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && cashModalState) closeCashModal();
+});
 
 function formatRupiah(num) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num);

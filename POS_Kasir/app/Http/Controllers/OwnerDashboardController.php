@@ -64,6 +64,7 @@ class OwnerDashboardController extends Controller
                 's.service_type',
                 's.payment_method',
                 's.payment_status',
+                's.total_amount',
                 's.notes',
             ]);
 

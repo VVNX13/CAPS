@@ -1609,3 +1609,52 @@ body {
 .rec-card-btn:hover {
   opacity: 0.9;
 }
+/* Kalkulator Uang Kembalian (modal terima bayar tunai) */
+.cash-total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  background: #f8fafc;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  font-weight: 700;
+  color: #475569;
+}
+.cash-total-row strong { font-size: 1.3rem; font-weight: 800; color: #0f172a; }
+.cash-input-wrap { position: relative; }
+.cash-input-wrap span {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-weight: 700;
+  color: #64748b;
+  pointer-events: none;
+}
+.cash-input-wrap .form-control {
+  padding-left: 44px;
+  font-size: 1.25rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.cash-quick-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 16px;
+}
+.cash-change-box {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px;
+  border-radius: 12px;
+  background: #f1f5f9;
+  color: #475569;
+  font-weight: 700;
+}
+.cash-change-box strong { font-size: 1.5rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.cash-change-box.is-ok { background: #d1fae5; color: #065f46; }
+.cash-change-box.is-short { background: #fee2e2; color: #b91c1c; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
