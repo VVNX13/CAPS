@@ -62,6 +62,7 @@ class OwnerDashboardController extends Controller
                 's.customer_name',
                 's.customer_phone',
                 's.service_type',
+                's.table_number',
                 's.payment_method',
                 's.payment_status',
                 's.total_amount',
@@ -121,6 +122,7 @@ class OwnerDashboardController extends Controller
         $data = $request->validate([
             'sale_id' => ['required', 'integer'],
             'payment_status' => ['required', 'in:paid,unpaid'],
+            'cash_received' => ['nullable', 'numeric', 'min:0', 'max:9999999999'],
         ]);
 
         $saleId = (int) $data['sale_id'];
@@ -136,7 +138,28 @@ class OwnerDashboardController extends Controller
             return ApiResponse::error('Transaksi tidak ditemukan dalam cakupan Anda', 404);
         }
 
-        DB::table('sales')->where('id', $saleId)->update(['payment_status' => $data['payment_status']]);
+        $sale = DB::table('sales')->where('id', $saleId)->first(['payment_method', 'total_amount']);
+
+        $update = [
+            'payment_status' => $data['payment_status'],
+            'cash_received' => null,
+            'cash_change' => null,
+        ];
+
+        // Kembalian dihitung ulang di server supaya angka di struk tidak bisa dimanipulasi.
+        if ($data['payment_status'] === 'paid' && $sale->payment_method === 'cash' && isset($data['cash_received'])) {
+            $received = round((float) $data['cash_received'], 2);
+            $total = (float) $sale->total_amount;
+
+            if ($received < $total) {
+                return ApiResponse::error('Uang yang diterima kurang dari total tagihan', 422);
+            }
+
+            $update['cash_received'] = $received;
+            $update['cash_change'] = round($received - $total, 2);
+        }
+
+        DB::table('sales')->where('id', $saleId)->update($update);
 
         return ApiResponse::success(
             null,

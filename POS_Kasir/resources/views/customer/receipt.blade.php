@@ -123,6 +123,12 @@
                     <span style="color:#64748b;">Layanan:</span>
                     <strong>{{ $sale->service_type === 'dine_in' ? 'Makan di Tempat' : 'Bungkus (Takeaway)' }}</strong>
                 </div>
+                @if ($sale->table_number)
+                    <div style="display:flex; justify-content:space-between;">
+                        <span style="color:#64748b;">No. Meja:</span>
+                        <strong>{{ $sale->table_number }}</strong>
+                    </div>
+                @endif
                 <div style="display:flex; justify-content:space-between;">
                     <span style="color:#64748b;">Metode Bayar:</span>
                     <strong style="text-transform:uppercase;">{{ $sale->payment_method }}</strong>
@@ -174,6 +180,19 @@
                 <span>TOTAL AKHIR:</span>
                 <span style="color:var(--primary);">{{ rupiah($sale->total_amount) }}</span>
             </div>
+
+            @if ($sale->payment_method === 'cash' && $sale->cash_received !== null)
+                <div style="font-size:0.85rem; line-height:1.7; margin-top:6px;">
+                    <div style="display:flex; justify-content:space-between;">
+                        <span style="color:#64748b;">Tunai Diterima:</span>
+                        <span>{{ rupiah($sale->cash_received) }}</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-weight:700;">
+                        <span>Kembalian:</span>
+                        <span>{{ rupiah($sale->cash_change) }}</span>
+                    </div>
+                </div>
+            @endif
 
             <div class="receipt-divider"></div>
 

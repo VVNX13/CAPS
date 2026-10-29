@@ -21,6 +21,8 @@ class Sale extends Model
         'qris_amount_total',
         'payment_method',
         'payment_status',
+        'cash_received',
+        'cash_change',
         'qris_payload',
         'qris_transaction_id',
         'order_status',
@@ -32,6 +34,8 @@ class Sale extends Model
         return [
             'total_amount' => 'decimal:2',
             'qris_amount_total' => 'decimal:2',
+            'cash_received' => 'decimal:2',
+            'cash_change' => 'decimal:2',
         ];
     }
 

@@ -40,6 +40,11 @@ function initOwnerPolling(ownerTypes, workingLabel) {
 
   loadDashboardData();
 
+  // Tutup modal kalkulator kembalian dengan tombol Esc
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && cashModalState) closeCashModal();
+  });
+
   // Polling setiap 5 detik
   pollingInterval = setInterval(() => {
     checkNewOrdersPolling(ownerTypes);
@@ -126,20 +131,54 @@ function filterOrderStatus(status) {
   renderOrderCards(currentOrdersCache);
 }
 
+// ===== Pencarian antrean (no. meja, invoice, nama, HP, menu) =====
+let orderSearchQuery = '';
+
+function searchOrders(value) {
+  orderSearchQuery = String(value || '').trim().toLowerCase();
+  renderOrderCards(currentOrdersCache);
+}
+
+function matchesOrderSearch(order) {
+  if (!orderSearchQuery) return true;
+
+  const haystack = [
+    order.table_number ? `meja ${order.table_number}` : '',
+    order.invoice_number,
+    order.customer_name,
+    order.customer_phone,
+    order.product_name,
+  ].join(' ').toLowerCase();
+
+  // Semua kata harus cocok, contoh: "budi kopi"
+  return orderSearchQuery.split(/\s+/).every(word => haystack.includes(word));
+}
+
 function renderOrderCards(orders) {
   const container = document.getElementById('ordersContainer');
   if (!container) return;
 
-  const filtered = (activeOrderFilter === 'all') 
-    ? orders 
-    : orders.filter(o => o.item_status === activeOrderFilter);
+  const byStatus = (activeOrderFilter === 'all')
+    ? (orders || [])
+    : (orders || []).filter(o => o.item_status === activeOrderFilter);
+  const filtered = byStatus.filter(matchesOrderSearch);
 
-  if (!filtered || filtered.length === 0) {
+  const countEl = document.getElementById('orderSearchCount');
+  if (countEl) countEl.textContent = orderSearchQuery ? `${filtered.length} hasil` : '';
+
+  if (filtered.length === 0) {
+    const title = orderSearchQuery
+      ? `Tidak ada pesanan yang cocok dengan "${escapeHtml(orderSearchQuery)}"`
+      : `Tidak ada antrean pesanan ${activeOrderFilter !== 'all' ? '(' + activeOrderFilter + ')' : 'aktif'}`;
+    const hint = orderSearchQuery
+      ? 'Coba kata kunci lain, atau hapus pencarian untuk melihat semua antrean.'
+      : 'Pesanan pelanggan yang masuk akan otomatis muncul di sini.';
+
     container.innerHTML = `
       <div style="text-align:center; padding:40px 20px; background:#fff; border-radius:16px; border:1px dashed #cbd5e1; grid-column:1/-1;">
-        <div style="font-size:2.5rem; margin-bottom:8px;">🍽️</div>
-        <h3 style="color:#64748b; font-size:1.1rem; font-weight:700;">Tidak ada antrean pesanan ${activeOrderFilter !== 'all' ? '(' + activeOrderFilter + ')' : 'aktif'}</h3>
-        <p style="color:#94a3b8; font-size:0.85rem; margin-top:2px;">Pesanan pelanggan yang masuk akan otomatis muncul di sini.</p>
+        <div style="font-size:2.5rem; margin-bottom:8px;">${orderSearchQuery ? '🔍' : '🍽️'}</div>
+        <h3 style="color:#64748b; font-size:1.1rem; font-weight:700;">${title}</h3>
+        <p style="color:#94a3b8; font-size:0.85rem; margin-top:2px;">${hint}</p>
       </div>
     `;
     return;
@@ -164,9 +203,10 @@ function renderOrderCards(orders) {
           <div>
             <div style="font-weight:800; font-size:1.1rem; color:#1e293b;">
               ${isDineIn ? '🍽️ Makan di Tempat' : '🛍️ Takeaway / Bungkus'}
+              ${order.table_number ? `<span class="brand-badge" style="margin-left:4px;">Meja ${escapeHtml(order.table_number)}</span>` : ''}
             </div>
             <div style="font-size:0.78rem; color:#64748b; margin-top:2px;">
-              Inv: <strong>${order.invoice_number}</strong> &bull; ${order.customer_name}
+              Inv: <strong>${escapeHtml(order.invoice_number)}</strong> &bull; ${escapeHtml(order.customer_name)}
             </div>
           </div>
           <div>${statusBadge}</div>
@@ -328,7 +368,7 @@ async function submitCashPayment(e) {
   btn.disabled = true;
 
   const ok = await markSalePaid(cashModalState.saleId,
-    `Lunas • Kembalian ${formatRupiah(change)}`);
+    `Lunas • Kembalian ${formatRupiah(change)}`, received);
 
   if (ok) {
     closeCashModal();
@@ -337,12 +377,15 @@ async function submitCashPayment(e) {
   }
 }
 
-async function markSalePaid(saleId, successMessage) {
+async function markSalePaid(saleId, successMessage, cashReceived = null) {
+  const payload = { sale_id: saleId, payment_status: 'paid' };
+  if (cashReceived !== null) payload.cash_received = cashReceived;
+
   try {
     const res = await fetch('/api/owner/payment/status', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sale_id: saleId, payment_status: 'paid' })
+      body: JSON.stringify(payload)
     });
     const result = await res.json();
     if (result.success) {
@@ -357,9 +400,6 @@ async function markSalePaid(saleId, successMessage) {
   return false;
 }
 
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && cashModalState) closeCashModal();
-});
 
 function formatRupiah(num) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num);

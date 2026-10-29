@@ -1658,3 +1658,29 @@ body {
 .cash-change-box.is-ok { background: #d1fae5; color: #065f46; }
 .cash-change-box.is-short { background: #fee2e2; color: #b91c1c; }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Pencarian antrean pesanan */
+.order-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-bottom: 14px;
+}
+.order-search-icon {
+  position: absolute;
+  left: 12px;
+  font-size: 0.9rem;
+  pointer-events: none;
+}
+.order-search .form-control {
+  padding-left: 36px;
+  padding-right: 80px;
+}
+.order-search-count {
+  position: absolute;
+  right: 14px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #64748b;
+  pointer-events: none;
+}

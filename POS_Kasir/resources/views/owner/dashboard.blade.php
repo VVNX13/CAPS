@@ -81,6 +81,15 @@
             </div>
         </div>
 
+        <!-- Pencarian Antrean -->
+        <div class="order-search">
+            <span class="order-search-icon" aria-hidden="true">🔍</span>
+            <input type="search" id="orderSearch" class="form-control" autocomplete="off"
+                   placeholder="Cari no. meja, invoice, nama pembeli, atau menu…"
+                   aria-label="Cari pesanan" oninput="searchOrders(this.value)">
+            <span id="orderSearchCount" class="order-search-count"></span>
+        </div>
+
         <!-- Order Cards Stream -->
         <div id="ordersContainer" class="orders-grid"></div>
     </main>

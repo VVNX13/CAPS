@@ -288,7 +288,28 @@ function setServiceType(type) {
   document.getElementById('service_type').value = type;
   document.getElementById('btnDineIn').classList.toggle('active', type === 'dine_in');
   document.getElementById('btnTakeaway').classList.toggle('active', type === 'takeaway');
+
+  // Nomor meja hanya dibutuhkan untuk makan di tempat.
+  const group = document.getElementById('tableNumberGroup');
+  const input = document.getElementById('table_number');
+  if (group && input) {
+    group.style.display = type === 'dine_in' ? '' : 'none';
+    input.required = type === 'dine_in';
+  }
 }
+
+// Isi nomor meja otomatis dari link/QR meja, contoh: /?meja=5
+function prefillTableNumber() {
+  const input = document.getElementById('table_number');
+  if (!input) return;
+
+  const params = new URLSearchParams(window.location.search);
+  const raw = (params.get('meja') || params.get('table') || '').trim();
+  if (/^[A-Za-z0-9\- ]{1,10}$/.test(raw)) {
+    input.value = raw.toUpperCase();
+  }
+}
+document.addEventListener('DOMContentLoaded', prefillTableNumber);
 
 async function submitCheckout(e) {
   e.preventDefault();
@@ -313,6 +334,9 @@ async function submitCheckout(e) {
   const customer_name = document.getElementById('customer_name').value.trim();
   const customer_phone = document.getElementById('customer_phone').value.trim();
   const service_type = document.getElementById('service_type').value;
+  const table_number = service_type === 'dine_in'
+    ? (document.getElementById('table_number')?.value.trim().toUpperCase() || '')
+    : '';
   const payment_method = document.querySelector('input[name="payment_method"]:checked')?.value || 'qris';
   const notes = document.getElementById('order_notes')?.value.trim() || '';
 
@@ -330,6 +354,7 @@ async function submitCheckout(e) {
         customer_name,
         customer_phone,
         service_type,
+        table_number,
         payment_method,
         notes,
         items
