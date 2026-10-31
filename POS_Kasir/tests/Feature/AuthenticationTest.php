@@ -62,6 +62,37 @@ class AuthenticationTest extends TestCase
         $this->assertGuest();
     }
 
+    public function test_login_form_post_redirects_to_the_dashboard(): void
+    {
+        $user = User::factory()->ownerMakanan()->create(['username' => 'owner_makanan']);
+
+        $this->from('/login')->post('/login', [
+            'username' => 'owner_makanan',
+            'password' => 'password123',
+        ])->assertRedirect(route('owner.dashboard'));
+
+        $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_login_form_post_with_a_wrong_password_returns_to_the_form(): void
+    {
+        User::factory()->create(['username' => 'owner_minuman']);
+
+        $this->from('/login')->post('/login', [
+            'username' => 'owner_minuman',
+            'password' => 'salah-total',
+        ])->assertRedirect('/login')
+            ->assertSessionHasErrors(['login' => 'Username atau password salah']);
+
+        $this->assertGuest();
+
+        // The error is shown on the login page after the redirect.
+        $this->followingRedirects()->from('/login')->post('/login', [
+            'username' => 'owner_minuman',
+            'password' => 'salah-total',
+        ])->assertSee('Username atau password salah');
+    }
+
     public function test_api_endpoints_return_401_for_guests(): void
     {
         $this->getJson('/api/owner/orders')->assertStatus(401);
