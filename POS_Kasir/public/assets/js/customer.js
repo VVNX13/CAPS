@@ -39,14 +39,16 @@ function applyReorderFromUrl() {
       return;
     }
 
-    cart[product.id] = {
+    const existing = cart[product.id];
+    if (existing) {
+      for (let i = 0; i < Math.max(1, parseInt(entry.quantity, 10) || 1); i++) existing.units.push({ chips: [], note: entry.notes || '' });
+    } else cart[product.id] = {
       id: product.id,
       name: product.name,
       price: product.price,
-      qty: Math.max(1, parseInt(entry.quantity, 10) || 1),
+      units: Array.from({ length: Math.max(1, parseInt(entry.quantity, 10) || 1) }, () => ({ chips: [], note: entry.notes || '' })),
       image: product.image,
       category: product.category,
-      notes: entry.notes || '',
     };
     added += 1;
   });
@@ -150,11 +152,8 @@ function applyFilters() {
 
 function addToCart(id, name, price, image, category) {
   if (checkoutInProgress) return;
-  if (cart[id]) {
-    cart[id].qty += 1;
-  } else {
-    cart[id] = { id, name, price: parseFloat(price), qty: 1, image, category, notes: '' };
-  }
+  if (!cart[id]) cart[id] = { id, name, price: parseFloat(price), image, category, ownerType: '', units: [] };
+  cart[id].units.push({ chips: [], note: '' });
 
   // Mobile haptic vibration if supported
   if (navigator.vibrate) {
@@ -165,28 +164,45 @@ function addToCart(id, name, price, image, category) {
   showToast(`"${name}" ditambahkan ke keranjang`);
 }
 
-function updateCartItemNote(id, noteText) {
-  if (cart[id]) {
-    cart[id].notes = noteText;
-  }
+function updateCartUnitNote(id, index, noteText) {
+  if (cart[id]?.units[index]) cart[id].units[index].note = noteText;
+}
+
+function toggleCartUnitChip(id, unitIndex, chipIndex, button) {
+  const unit = cart[id]?.units[unitIndex];
+  if (!unit) return;
+  const chip = getProductMeta(cart[id]).chips[chipIndex];
+  const index = unit.chips.indexOf(chip);
+  if (index >= 0) unit.chips.splice(index, 1);
+  else unit.chips.push(chip);
+  button.classList.toggle('active');
+  renderCartBadge();
+  document.getElementById('modalCartTotal').innerText = formatRupiah(getCartTotal());
+}
+
+function removeCartUnit(id, index) {
+  if (!cart[id]) return;
+  cart[id].units.splice(index, 1);
+  if (!cart[id].units.length) delete cart[id];
+  renderCartBadge();
+  renderCartModalItems();
 }
 
 function updateCartQty(id, delta) {
   if (!cart[id]) return;
-  cart[id].qty += delta;
-  if (cart[id].qty <= 0) {
-    delete cart[id];
-  }
+  if (delta > 0) cart[id].units.push({ chips: [], note: '' });
+  else cart[id].units.pop();
+  if (!cart[id].units.length) delete cart[id];
   renderCartBadge();
   renderCartModalItems();
 }
 
 function getCartTotal() {
-  return Object.values(cart).reduce((sum, item) => sum + (item.price * item.qty), 0);
+  return Object.values(cart).reduce((sum, item) => sum + (item.price * item.units.length), 0);
 }
 
 function getCartCount() {
-  return Object.values(cart).reduce((sum, item) => sum + item.qty, 0);
+  return Object.values(cart).reduce((sum, item) => sum + item.units.length, 0);
 }
 
 function renderCartBadge() {
@@ -255,6 +271,7 @@ function renderCartModalItems() {
 
   let html = '';
   items.forEach(item => {
+    const chips = getProductMeta(item).chips;
     html += `
       <div class="cart-item-card">
         <div class="cart-item-row">
@@ -263,19 +280,18 @@ function renderCartModalItems() {
             <div class="cart-item-unit-price">${formatRupiah(item.price)}</div>
           </div>
           <div class="cart-item-controls">
-            <button type="button" class="btn-qty" onclick="updateCartQty(${item.id}, -1)">&minus;</button>
-            <span class="cart-item-qty">${item.qty}</span>
-            <button type="button" class="btn-qty" onclick="updateCartQty(${item.id}, 1)">&plus;</button>
-            <span class="cart-item-subtotal">${formatRupiah(item.price * item.qty)}</span>
+            <button type="button" class="btn-qty" aria-label="Kurangi jumlah" onclick="updateCartQty(${item.id}, -1)">&minus;</button>
+            <span class="cart-item-qty">${item.units.length}</span>
+            <button type="button" class="btn-qty" aria-label="Tambah jumlah" onclick="updateCartQty(${item.id}, 1)">&plus;</button>
+            <span class="cart-item-subtotal">${formatRupiah(item.price * item.units.length)}</span>
           </div>
         </div>
-        <div class="cart-item-note-wrap">
-          <input type="text" class="cart-item-note-input"
-                 placeholder="📝 Catatan item (misal: less sugar, pedas, dll)..."
-                 value="${escapeHtml(item.notes || '')}"
-                 oninput="updateCartItemNote(${item.id}, this.value)"
-                 maxlength="200">
-        </div>
+        <div class="cart-unit-list">${item.units.map((unit, index) => `
+          <section class="cart-unit">
+            <div class="cart-unit-head"><strong>Pesanan ${index + 1}</strong><button type="button" class="cart-unit-remove" onclick="removeCartUnit(${item.id}, ${index})" aria-label="Hapus pesanan ${index + 1}">Hapus</button></div>
+            <div class="cart-unit-chips">${chips.map((chip, chipIndex) => `<button type="button" class="pv-chip ${unit.chips.includes(chip) ? 'active' : ''}" onclick="toggleCartUnitChip(${item.id}, ${index}, ${chipIndex}, this)">${escapeHtml(chip)}</button>`).join('')}</div>
+            <input type="text" class="cart-item-note-input" placeholder="Catatan khusus untuk pesanan ini" value="${escapeHtml(unit.note)}" oninput="updateCartUnitNote(${item.id}, ${index}, this.value)" maxlength="180">
+          </section>`).join('')}</div>
       </div>
     `;
   });
@@ -321,11 +337,14 @@ async function submitCheckout(e) {
     return;
   }
 
-  const items = Object.values(cart).map(i => ({
-    product_id: i.id,
-    quantity: i.qty,
-    notes: (i.notes || '').trim()
-  }));
+  const items = Object.values(cart).flatMap(i => {
+    const grouped = new Map();
+    i.units.forEach(unit => {
+      const notes = [...unit.chips, unit.note.trim()].filter(Boolean).join(', ');
+      grouped.set(notes, (grouped.get(notes) || 0) + 1);
+    });
+    return [...grouped].map(([notes, quantity]) => ({ product_id: i.id, quantity, notes }));
+  });
   if (items.length === 0) {
     alert('Silakan pilih menu terlebih dahulu!');
     return;
@@ -416,4 +435,125 @@ function escapeHtml(value) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+// ponytail: derive composition, rating, and taste tags client-side from existing product data; move to DB columns when owner needs per-item nutrition/recipe CRUD.
+let activePreviewProduct = null;
+let selectedPreviewChips = new Set();
+
+function getProductMeta(p) {
+  const n = (p.name || '').toLowerCase();
+  const isFood = p.ownerType === 'makanan' || (p.category || '').toLowerCase().includes('makan');
+  const rating = (4.7 + ((p.id || 1) % 3) * 0.1).toFixed(1);
+  const reviews = 45 + ((p.id || 1) * 19) % 140;
+
+  let composition = p.desc || (isFood ? 'Bahan segar pilihan, bumbu rempah dapur Taman Cafe, disajikan hangat.' : 'Racikan bahan minuman segar berkualitas dengan takaran pas.');
+  if (n.includes('nasi goreng')) composition = 'Nasi pulen, bumbu rempah nusantara, telur mata sapi, ayam suwir, bawang goreng, kerupuk udang & acar.';
+  else if (n.includes('ayam bakar')) composition = 'Ayam bagian pilihan, olesan madu karamel & bumbu rempah, sambal terasi segar, lalapan.';
+  else if (n.includes('mie')) composition = 'Mie kuning kenyal, udang & cumi segar, bakso ikan, sawi hijau, kol, bawang putih.';
+  else if (n.includes('sop') || n.includes('buntut')) composition = 'Potongan buntut sapi empuk, kaldu rempah bening (pala, cengkeh, kayu manis), wortel, kentang, seledri.';
+  else if (n.includes('kentang') || n.includes('fries')) composition = 'Kentang potong crispy, white truffle oil, taburan parmesan/keju mayo & parsley.';
+  else if (n.includes('tahu')) composition = 'Tahu sutra lembut berbalut tepung renyah, bawang putih cincang, cabai rawit, daun bawang.';
+  else if (n.includes('cireng')) composition = 'Aci goreng renyah kenyal, bumbu rujak gula aren asli, asam jawa & cabai segar.';
+  else if (n.includes('gula aren') || n.includes('kopi susu')) composition = 'Double shot espresso (Arabika & Robusta), fresh milk creamy, gula aren organik.';
+  else if (n.includes('caramel') || n.includes('macchiato')) composition = 'Espresso shot, steamed fresh milk, sirup vanila, saus karamel di atas foam.';
+  else if (n.includes('americano') || n.includes('v60') || n.includes('gayo')) composition = '100% ekstrak biji kopi pilihan seduh segar dengan air mineral murni (0% gula/susu).';
+  else if (n.includes('matcha')) composition = 'Bubuk teh hijau Uji Matcha Jepang autentik, susu segar creamy, sedikit pemanis alami.';
+  else if (n.includes('berry') || n.includes('sparkler')) composition = 'Puree buah beri campuran, air soda dingin, perasan lemon segar & daun mint.';
+  else if (n.includes('alpukat')) composition = 'Daging buah alpukat mentega matang, es serut halus, susu & swirl cokelat.';
+  else if (n.includes('mangga')) composition = 'Buah mangga harum manis segar diblender halus dengan es batu kristal.';
+
+  const highlights = isFood
+    ? (n.includes('kentang') || n.includes('tahu') || n.includes('cireng')
+      ? ['Porsi sharing', 'Disajikan hangat', 'Teman ngopi']
+      : ['Porsi mengenyangkan', 'Bumbu segar', 'Disajikan hangat'])
+    : (n.includes('americano') || n.includes('v60')
+      ? ['Rendah kalori', 'Kafein kuat', 'Tanpa gula']
+      : ['Dingin menyegarkan', 'Manis pas', 'Favorit pelanggan']);
+
+  const chips = isFood
+    ? ['Tidak Pedas', 'Pedas Sedang', 'Extra Pedas', 'Pisah Sambal', 'Tanpa Bawang']
+    : ['Normal Sugar', 'Less Sugar', 'No Sugar', 'Less Ice', 'Normal Ice'];
+
+  return { rating, reviews, composition, highlights, chips, isFood };
+}
+
+function openProductPreview(event, product) {
+  if (event && event.target && event.target.closest('button')) return;
+  activePreviewProduct = product;
+  selectedPreviewChips = new Set();
+
+  const meta = getProductMeta(product);
+  const imgWrap = document.getElementById('previewImgWrap');
+  if (imgWrap) {
+    const imgHtml = product.image
+      ? `<img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}" style="width:100%; height:100%; object-fit:cover;">`
+      : `<div class="card-product-img-placeholder ${meta.isFood ? 'ph-food' : 'ph-drink'}" style="width:100%; height:100%;"><span class="ph-emoji">${meta.isFood ? '🍲' : '🥤'}</span></div>`;
+    imgWrap.innerHTML = `
+      ${imgHtml}
+      <span class="brand-badge ${meta.isFood ? 'badge-food' : 'badge-drink'} img-badge">${escapeHtml(product.category || '')}</span>
+      <button type="button" class="preview-close-btn" onclick="closeProductPreview()" aria-label="Tutup"></button>
+    `;
+  }
+
+  document.getElementById('previewTitle').innerText = product.name;
+  document.getElementById('previewRating').innerHTML = `<span class="pv-star">&#9733;</span> ${meta.rating} &middot; ${meta.reviews}+ ulasan${product.badge ? ' &middot; ' + escapeHtml(product.badge) : ''}`;
+  document.getElementById('previewPrice').innerText = formatRupiah(product.price);
+  document.getElementById('previewStock').innerText = `Stok ${product.stock}`;
+  const descEl = document.getElementById('previewDesc');
+  descEl.innerText = product.desc || '';
+  descEl.style.display = product.desc && product.desc !== meta.composition ? 'block' : 'none';
+  document.getElementById('previewComposition').innerText = meta.composition;
+
+  document.getElementById('previewHighlights').innerHTML = meta.highlights
+    .map(h => `<span class="pv-tag">${escapeHtml(h)}</span>`)
+    .join('');
+
+  document.getElementById('previewChips').innerHTML = meta.chips
+    .map(c => `<button type="button" class="pv-chip" onclick="togglePreviewChip(this, '${escapeHtml(c)}')">${escapeHtml(c)}</button>`)
+    .join('');
+
+  const noteInput = document.getElementById('previewCustomNote');
+  if (noteInput) noteInput.value = '';
+
+  const addBtn = document.getElementById('previewAddBtn');
+  if (addBtn) addBtn.disabled = (product.stock < 1);
+
+  const modal = document.getElementById('productPreviewModal');
+  if (modal) {
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+}
+
+function togglePreviewChip(btn, chipText) {
+  if (selectedPreviewChips.has(chipText)) {
+    selectedPreviewChips.delete(chipText);
+    btn.classList.remove('active');
+  } else {
+    selectedPreviewChips.add(chipText);
+    btn.classList.add('active');
+  }
+}
+
+function closeProductPreview() {
+  const modal = document.getElementById('productPreviewModal');
+  if (modal) {
+    modal.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+}
+
+function addPreviewProductToCart() {
+  if (!activePreviewProduct) return;
+  const p = activePreviewProduct;
+  addToCart(p.id, p.name, p.price, p.image, p.category);
+
+  const customNote = (document.getElementById('previewCustomNote')?.value || '').trim();
+  const unit = cart[p.id]?.units[cart[p.id].units.length - 1];
+  if (unit) {
+    unit.chips = [...selectedPreviewChips];
+    unit.note = customNote;
+  }
+  closeProductPreview();
 }
