@@ -107,5 +107,8 @@ class CustomerMenuTest extends TestCase
         $this->assertStringContainsString('id="menuSortSelect"', $html);
         $this->assertStringContainsString('data-price="20000"', $html);
         $this->assertStringContainsString('data-order="0"', $html);
+        $this->assertStringContainsString('id="productPreviewModal"', $html);
+        $this->assertStringContainsString('openProductPreview(event,', $html);
+        $this->assertStringContainsString('event.stopPropagation(); addToCart(', $html);
     }
 }

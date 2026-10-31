@@ -81,12 +81,15 @@
                         $targetPrice = $matchedProduct ? (float) $matchedProduct->price : $rec['price'];
                         $targetName = $matchedProduct ? $matchedProduct->name : $rec['name'];
                         $targetCat = $matchedProduct && $matchedProduct->category ? $matchedProduct->category->name : ($rec['cat'] === 'minuman' ? 'Minuman' : 'Makanan');
+                        $targetStock = $matchedProduct ? (int) $matchedProduct->stock : 20;
+                        $targetImgUrl = asset('assets/images/' . $rec['img']);
                     @endphp
-                    <div class="rec-card">
+                    <div class="rec-card" style="cursor:pointer;"
+                         onclick="openProductPreview(event, { id: {{ $targetId }}, name: @js($targetName), price: {{ $targetPrice }}, image: @js($targetImgUrl), category: @js($targetCat), ownerType: @js($rec['cat']), stock: {{ $targetStock }}, desc: @js($rec['desc']), badge: @js($rec['badge'] . ' · ' . $rec['sales']) })">
                         <div class="rec-card-img-wrap">
                             <span class="rec-card-badge">{{ $rec['badge'] }}</span>
                             <span class="rec-card-sales-pill">{{ $rec['sales'] }}</span>
-                            <img src="{{ asset('assets/images/' . $rec['img']) }}" alt="{{ $rec['name'] }}" loading="lazy">
+                            <img src="{{ $targetImgUrl }}" alt="{{ $rec['name'] }}" loading="lazy">
                         </div>
                         <div class="rec-card-body">
                             <div>
@@ -96,7 +99,7 @@
                             <div class="rec-card-footer">
                                 <div class="rec-card-price">{{ rupiah($targetPrice) }}</div>
                                 <button type="button" class="rec-card-btn"
-                                        onclick="addToCart({{ $targetId }}, @js($targetName), {{ $targetPrice }}, @js($rec['img']), @js($targetCat))">
+                                        onclick="event.stopPropagation(); addToCart({{ $targetId }}, @js($targetName), {{ $targetPrice }}, @js($rec['img']), @js($targetCat))">
                                     + Tambah
                                 </button>
                             </div>
@@ -141,7 +144,8 @@
                     $isFood = $product->category->owner_type === 'makanan';
                     $imageUrl = \App\Services\ProductImage::url($product->image, $product->name);
                 @endphp
-                <div class="card-product" data-category="{{ $product->category_id }}" data-name="{{ \Illuminate\Support\Str::lower($product->name) }}" data-price="{{ (float) $product->price }}" data-order="{{ $loop->index }}">
+                <div class="card-product" style="cursor:pointer;" data-category="{{ $product->category_id }}" data-name="{{ \Illuminate\Support\Str::lower($product->name) }}" data-price="{{ (float) $product->price }}" data-order="{{ $loop->index }}"
+                     onclick="openProductPreview(event, { id: {{ $product->id }}, name: @js($product->name), price: {{ (float) $product->price }}, image: @js($imageUrl ?? ''), category: @js($product->category->name), ownerType: @js($product->category->owner_type), stock: {{ (int) $product->stock }}, desc: @js((string) $product->description) })">
                     <div class="card-product-img-wrapper">
                         @if ($imageUrl)
                             <img src="{{ $imageUrl }}" alt="{{ $product->name }}" class="card-product-img" loading="lazy"
@@ -171,7 +175,7 @@
                             <div class="product-price">{{ rupiah($product->price) }}</div>
                             <button class="btn btn-primary btn-add-cart"
                                     {{ $product->stock < 1 ? 'disabled' : '' }}
-                                    onclick="addToCart({{ $product->id }}, @js($product->name), {{ (float) $product->price }}, @js($imageUrl ?? ''), @js($product->category->name))">
+                                    onclick="event.stopPropagation(); addToCart({{ $product->id }}, @js($product->name), {{ (float) $product->price }}, @js($imageUrl ?? ''), @js($product->category->name))">
                                 + Tambah
                             </button>
                         </div>
@@ -187,6 +191,44 @@
             <p style="font-size:0.85rem; color:#94a3b8;">Coba cari dengan kata kunci lain.</p>
         </div>
     </main>
+
+    <!-- Modal Detail / Preview Menu & Personalisasi -->
+    <div class="modal-overlay" id="productPreviewModal" onclick="if(event.target.id==='productPreviewModal') closeProductPreview()">
+        <div class="modal-box modal-bottom-sheet" onclick="event.stopPropagation()">
+            <div class="modal-sheet-handle"></div>
+            <div id="previewImgWrap" style="position:relative; width:100%; height:200px; background:#f1f5f9; overflow:hidden;"></div>
+            <div class="modal-body pv-body">
+                <div class="pv-head">
+                    <div>
+                        <h3 id="previewTitle" class="pv-title"></h3>
+                        <div id="previewRating" class="pv-meta"></div>
+                    </div>
+                    <div class="pv-price-wrap">
+                        <div id="previewPrice" class="pv-price"></div>
+                        <div id="previewStock" class="pv-meta"></div>
+                    </div>
+                </div>
+
+                <p id="previewDesc" class="pv-desc"></p>
+
+                <div class="pv-section">
+                    <div class="pv-label">Komposisi</div>
+                    <p id="previewComposition" class="pv-text"></p>
+                    <div id="previewHighlights" class="pv-highlights"></div>
+                </div>
+
+                <div class="pv-section">
+                    <div class="pv-label">Sesuaikan Pesanan <span class="pv-optional">Opsional</span></div>
+                    <div id="previewChips" class="pv-chips"></div>
+                    <input type="text" id="previewCustomNote" class="cart-item-note-input" placeholder="Catatan khusus, mis. tanpa es batu" maxlength="150">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="closeProductPreview()">Tutup</button>
+                <button type="button" id="previewAddBtn" class="btn btn-primary" style="flex:1;" onclick="addPreviewProductToCart()">+ Tambah ke Keranjang</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Floating Mobile Bottom Cart Bar -->
     <div class="floating-cart-bar" id="floatingCartBar" style="display:none;" onclick="openCartModal()">
@@ -215,7 +257,7 @@
                     <h3 style="font-size:1.15rem; font-weight:800; color:#0f172a;">Keranjang Pesanan</h3>
                     <p style="font-size:0.75rem; color:#64748b; margin-top:2px;">Periksa item sebelum mengirim pesanan</p>
                 </div>
-                <button class="btn btn-outline modal-close-btn" onclick="closeCartModal()">&times;</button>
+                <button type="button" class="btn btn-outline modal-close-btn" onclick="closeCartModal()" aria-label="Tutup keranjang"></button>
             </div>
 
             <form onsubmit="submitCheckout(event)">
