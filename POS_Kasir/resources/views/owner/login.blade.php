@@ -21,6 +21,8 @@
     .portal-login .password-field input { padding-right: 48px; }
     .portal-login .password-toggle { color: #70756f; }
     .portal-login .portal-submit { width: 100%; min-height: 50px; margin-top: 4px; border-radius: 8px; background: #25382d; color: white; font-size: 15px; font-weight: 600; }
+    .portal-login .portal-submit.is-loading { opacity: .85; }
+    .portal-error { margin-bottom: 12px; padding: 10px 12px; border-radius: 8px; border: 1px solid #f3c2bf; background: #fff1f0; color: #8a2018; font-size: 13px; }
     .portal-quick { border-top: 1px dashed #d3dbd0; margin-top: 20px; padding-top: 18px; text-align: center; }
     .portal-quick-title { font-size: 12px; color: #70756f; margin-bottom: 12px; }
     .portal-quick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -42,11 +44,15 @@
                 <p>Masuk untuk memantau pesanan real-time, KDS dapur &amp; laporan bisnis.</p>
             </div>
 
-            <form id="loginForm" onsubmit="handleLogin(event)">
+            <div id="loginError" class="portal-error" role="alert" @unless($errors->has('login')) hidden @endunless>{{ $errors->first('login') }}</div>
+
+            <form id="loginForm" method="POST" action="{{ route('login') }}" onsubmit="handleLogin(event)" novalidate>
+                @csrf
+
                 <div class="form-group">
                     <label class="form-label" for="username">Username</label>
                     <input type="text" id="username" name="username" class="form-control"
-                           placeholder="owner_makanan / owner_minuman / admin_kasir"
+                           value="{{ old('username') }}" placeholder="owner_makanan / owner_minuman / admin_kasir"
                            autocomplete="username" autocapitalize="none" spellcheck="false" required>
                 </div>
 
@@ -62,7 +68,7 @@
                 </div>
 
                 <button type="submit" id="btnLogin" class="btn portal-submit">
-                    Masuk ke Dashboard &nbsp; →
+                    <span id="btnLoginText">Masuk ke Dashboard</span>
                 </button>
             </form>
 
@@ -89,51 +95,60 @@
 
 @push('scripts')
     <script>
-        const loginUrl = @js(route('login'));
-
         function quickLogin(role) {
             document.getElementById('username').value = role;
             document.getElementById('password').value = 'password123';
-            document.getElementById('loginForm').dispatchEvent(new Event('submit'));
+            document.getElementById('loginForm').requestSubmit();
         }
 
         function togglePasswordVisibility() {
             const input = document.getElementById('password');
             const btn = document.getElementById('togglePassword');
             const revealed = input.type === 'text';
+            const label = revealed ? 'Lihat password' : 'Sembunyikan password';
 
             input.type = revealed ? 'password' : 'text';
             btn.setAttribute('aria-pressed', String(!revealed));
-            btn.setAttribute('aria-label', revealed ? 'Lihat password' : 'Sembunyikan password');
-            btn.setAttribute('title', revealed ? 'Lihat password' : 'Sembunyikan password');
+            btn.setAttribute('aria-label', label);
+            btn.setAttribute('title', label);
         }
 
-        async function handleLogin(e) {
-            e.preventDefault();
+        function showLoginError(message) {
+            const box = document.getElementById('loginError');
+            box.textContent = message;
+            box.hidden = !message;
+        }
+
+        function handleLogin(e) {
             const btn = document.getElementById('btnLogin');
-            btn.disabled = true;
-            btn.innerText = 'Memeriksa...';
+            const username = document.getElementById('username');
+            const password = document.getElementById('password');
 
-            const formData = new FormData();
-            formData.append('username', document.getElementById('username').value.trim());
-            formData.append('password', document.getElementById('password').value.trim());
-
-            try {
-                const res = await fetch(loginUrl, { method: 'POST', body: formData });
-                const data = await res.json();
-
-                if (data.success) {
-                    window.location.href = data.data.redirect;
-                } else {
-                    alert(data.message);
-                    btn.disabled = false;
-                    btn.innerText = 'Masuk ke Dashboard';
-                }
-            } catch (err) {
-                alert('Gagal login: ' + err.message);
-                btn.disabled = false;
-                btn.innerText = 'Masuk ke Dashboard';
+            if (btn.disabled) {
+                e.preventDefault();
+                return;
             }
+
+            username.value = username.value.trim();
+            password.value = password.value.trim();
+
+            if (!username.value || !password.value) {
+                e.preventDefault();
+                showLoginError('Username dan password wajib diisi.');
+                return;
+            }
+
+            showLoginError('');
+            btn.disabled = true;
+            btn.classList.add('is-loading');
+            document.getElementById('btnLoginText').textContent = 'Memeriksa...';
         }
+
+        window.addEventListener('pageshow', function () {
+            const btn = document.getElementById('btnLogin');
+            btn.disabled = false;
+            btn.classList.remove('is-loading');
+            document.getElementById('btnLoginText').textContent = 'Masuk ke Dashboard';
+        });
     </script>
 @endpush
