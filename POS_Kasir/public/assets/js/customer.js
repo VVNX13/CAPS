@@ -249,7 +249,7 @@ function renderCartModalItems() {
         <div style="font-size:2rem; margin-bottom:6px;">🛒</div>
         Keranjang pesanan masih kosong.
       </div>`;
-    totalEl.innerText = 'Rp 0';
+    renderCartTotals();
     return;
   }
 
@@ -281,7 +281,113 @@ function renderCartModalItems() {
   });
 
   container.innerHTML = html;
-  totalEl.innerText = formatRupiah(getCartTotal());
+  renderCartTotals();
+  refreshAppliedPromo();
+}
+
+// ===== Kupon promo =====
+// Potongan di sini hanya pratinjau; server menghitung ulang saat checkout.
+let appliedPromo = null; // { code, label, discount, subtotal }
+let promoCheckTimer = null;
+
+function renderCartTotals() {
+  const subtotal = getCartTotal();
+  const discount = appliedPromo ? Math.min(appliedPromo.discount, subtotal) : 0;
+  const rows = document.getElementById('cartDiscountRows');
+
+  if (rows) rows.style.display = discount > 0 ? '' : 'none';
+  if (discount > 0) {
+    document.getElementById('modalCartSubtotal').innerText = formatRupiah(subtotal);
+    document.getElementById('modalDiscountLabel').innerText = `Diskon ${appliedPromo.code} (${appliedPromo.label})`;
+    document.getElementById('modalCartDiscount').innerText = '-' + formatRupiah(discount);
+  }
+
+  const totalEl = document.getElementById('modalCartTotal');
+  if (totalEl) totalEl.innerText = formatRupiah(subtotal - discount);
+}
+
+function setPromoStatus(message, ok) {
+  const el = document.getElementById('promoStatus');
+  if (!el) return;
+  el.textContent = message || '';
+  el.className = 'promo-status' + (message ? (ok ? ' is-ok' : ' is-error') : '');
+}
+
+async function checkPromo(code, subtotal) {
+  const res = await fetch('/api/promo/check', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code, subtotal })
+  });
+  const result = await res.json();
+  if (!result.success) {
+    const firstError = result.errors ? Object.values(result.errors).flat()[0] : null;
+    throw new Error(firstError || result.message);
+  }
+  return result.data;
+}
+
+async function applyPromoCode() {
+  const input = document.getElementById('promoCodeInput');
+  const btn = document.getElementById('btnApplyPromo');
+  const code = (input?.value || '').trim().toUpperCase();
+
+  // Tombol berubah jadi "Hapus" saat kupon sudah terpasang.
+  if (appliedPromo && (!code || code === appliedPromo.code)) {
+    removePromoCode();
+    return;
+  }
+  if (!code) {
+    setPromoStatus('Masukkan kode kupon terlebih dahulu', false);
+    return;
+  }
+
+  btn.disabled = true;
+  try {
+    const subtotal = getCartTotal();
+    const data = await checkPromo(code, subtotal);
+    appliedPromo = { ...data, subtotal };
+    input.value = data.code;
+    btn.innerText = 'Hapus';
+    setPromoStatus(`✅ ${data.name}: hemat ${formatRupiah(data.discount)}`, true);
+  } catch (err) {
+    appliedPromo = null;
+    btn.innerText = 'Pakai';
+    setPromoStatus('❌ ' + err.message, false);
+  } finally {
+    btn.disabled = false;
+    renderCartTotals();
+  }
+}
+
+function removePromoCode() {
+  appliedPromo = null;
+  const input = document.getElementById('promoCodeInput');
+  if (input) input.value = '';
+  const btn = document.getElementById('btnApplyPromo');
+  if (btn) btn.innerText = 'Pakai';
+  setPromoStatus('', true);
+  renderCartTotals();
+}
+
+// Isi keranjang berubah: hitung ulang potongan (kupon persen / minimal belanja).
+function refreshAppliedPromo() {
+  if (!appliedPromo || appliedPromo.subtotal === getCartTotal()) return;
+  clearTimeout(promoCheckTimer);
+  promoCheckTimer = setTimeout(async () => {
+    if (!appliedPromo) return;
+    const subtotal = getCartTotal();
+    try {
+      const data = await checkPromo(appliedPromo.code, subtotal);
+      appliedPromo = { ...data, subtotal };
+      setPromoStatus(`✅ ${data.name}: hemat ${formatRupiah(data.discount)}`, true);
+    } catch (err) {
+      const code = appliedPromo.code;
+      removePromoCode();
+      setPromoStatus(`❌ Kupon ${code} dilepas: ${err.message}`, false);
+    }
+    renderCartTotals();
+  }, 400);
 }
 
 function setServiceType(type) {
@@ -357,6 +463,7 @@ async function submitCheckout(e) {
         table_number,
         payment_method,
         notes,
+        promo_code: appliedPromo ? appliedPromo.code : null,
         items
       })
     });
@@ -364,6 +471,7 @@ async function submitCheckout(e) {
     const result = await res.json();
     if (result.success) {
       cart = {};
+      appliedPromo = null;
       renderCartBadge();
       window.location.href = result.data.receipt_url;
     } else {

@@ -47,6 +47,7 @@
 
             {{-- Shop-wide configuration: admin only, hidden for food / drink owners. --}}
             @if ($navIsAdmin)
+                <a href="{{ route('owner.promos') }}" class="btn btn-sm {{ $navCurrent === 'promos' ? 'btn-primary' : 'btn-outline' }}">🏷️ Kupon Promo</a>
                 <a href="{{ route('owner.qris') }}" class="btn btn-sm {{ $navCurrent === 'qris' ? 'btn-primary' : 'btn-outline' }}">📱 QRIS Dinamis</a>
                 <a href="{{ route('qr-center') }}" target="_blank" class="btn btn-sm btn-outline">🖨️ Cetak QR</a>
             @endif

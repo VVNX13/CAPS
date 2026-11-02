@@ -223,8 +223,25 @@
                     <!-- Cart Item List -->
                     <div id="cartItemsList" class="cart-items-scroll"></div>
 
+                    <!-- Kupon Promo -->
+                    <div class="promo-apply">
+                        <div class="promo-apply-row">
+                            <input type="text" id="promoCodeInput" class="form-control" maxlength="30"
+                                   placeholder="🏷️ Punya kode kupon?" autocomplete="off" aria-label="Kode kupon"
+                                   style="text-transform:uppercase;"
+                                   onkeydown="if (event.key === 'Enter') { event.preventDefault(); applyPromoCode(); }">
+                            <button type="button" id="btnApplyPromo" class="btn btn-outline btn-sm" onclick="applyPromoCode()">Pakai</button>
+                        </div>
+                        <div id="promoStatus" class="promo-status" aria-live="polite"></div>
+                    </div>
+
+                    <div id="cartDiscountRows" class="cart-discount-rows" style="display:none;">
+                        <div><span>Subtotal</span><span id="modalCartSubtotal">Rp 0</span></div>
+                        <div class="is-discount"><span id="modalDiscountLabel">Diskon</span><span id="modalCartDiscount">-Rp 0</span></div>
+                    </div>
+
                     <div class="cart-total-bar">
-                        <span style="font-weight:700; color:#475569;">Total Belanja:</span>
+                        <span style="font-weight:700; color:#475569;">Total Bayar:</span>
                         <span id="modalCartTotal" style="color:var(--primary); font-size:1.25rem; font-weight:800;">Rp 0</span>
                     </div>
 

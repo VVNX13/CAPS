@@ -5,6 +5,7 @@ use App\Http\Controllers\CustomerHistoryController;
 use App\Http\Controllers\CustomerMenuController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\OwnerDashboardController;
+use App\Http\Controllers\PromoCodeController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\QrCenterController;
 use App\Http\Controllers\QrisController;
@@ -55,4 +56,7 @@ Route::middleware('auth')->prefix('owner')->name('owner.')->group(function () {
     Route::get('/qris', [QrisController::class, 'view'])
         ->middleware('admin')
         ->name('qris');
+    Route::get('/promo', [PromoCodeController::class, 'index'])
+        ->middleware('admin')
+        ->name('promos');
 });

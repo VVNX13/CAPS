@@ -1723,6 +1723,56 @@ body {
   margin-bottom: 8px;
 }
 
+/* Potongan harga / kupon promo */
+.order-discount-note {
+  font-size: 0.8rem;
+  background: #ecfdf5;
+  color: #047857;
+  padding: 6px 10px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+.discount-current {
+  background: #eff6ff;
+  color: #1d4ed8;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 0.83rem;
+  margin-bottom: 12px;
+}
+.promo-apply { margin: 12px 0 4px; }
+.promo-apply-row { display: flex; gap: 8px; }
+.promo-apply-row .form-control { flex: 1; min-width: 0; }
+.promo-status { font-size: 0.8rem; margin-top: 6px; min-height: 0; }
+.promo-status.is-ok { color: #047857; }
+.promo-status.is-error { color: #b91c1c; }
+.cart-discount-rows { font-size: 0.88rem; color: #475569; margin-top: 8px; }
+.cart-discount-rows > div { display: flex; justify-content: space-between; gap: 8px; padding: 2px 0; }
+.cart-discount-rows .is-discount { color: #047857; font-weight: 700; }
+.promo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+.promo-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-left: 4px solid #10b981;
+  border-radius: 14px;
+  padding: 14px 16px;
+}
+.promo-card.is-off { border-left-color: #cbd5e1; opacity: 0.85; }
+.promo-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-weight: 800;
+  font-size: 1.1rem;
+  color: #0f172a;
+  letter-spacing: 0.5px;
+  word-break: break-all;
+}
+.promo-value { font-weight: 800; color: #047857; margin-top: 8px; }
+.promo-meta { font-size: 0.78rem; color: #64748b; margin-top: 4px; }
+
 /* ===== Struk thermal (58mm / 80mm) ===== */
 .print-controls {
   display: flex;

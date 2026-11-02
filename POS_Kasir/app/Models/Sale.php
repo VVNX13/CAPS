@@ -17,6 +17,10 @@ class Sale extends Model
         'customer_email',
         'service_type',
         'table_number',
+        'subtotal_amount',
+        'discount_amount',
+        'promo_code',
+        'discount_note',
         'total_amount',
         'qris_amount_total',
         'payment_method',
@@ -35,6 +39,8 @@ class Sale extends Model
     protected function casts(): array
     {
         return [
+            'subtotal_amount' => 'decimal:2',
+            'discount_amount' => 'decimal:2',
             'total_amount' => 'decimal:2',
             'qris_amount_total' => 'decimal:2',
             'cash_received' => 'decimal:2',

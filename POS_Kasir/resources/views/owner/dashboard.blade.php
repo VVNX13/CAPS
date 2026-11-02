@@ -139,6 +139,73 @@
         </div>
     </div>
 
+    <!-- Modal Potongan Harga / Diskon -->
+    <div class="modal-overlay" id="discountModal" onclick="if (event.target === this) closeDiscountModal()">
+        <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="discountModalTitle">
+            <div class="modal-sheet-handle"></div>
+
+            <div class="modal-header">
+                <div>
+                    <h3 id="discountModalTitle" style="font-size:1.15rem; font-weight:800; color:#0f172a;">🏷️ Potongan Harga</h3>
+                    <p id="discountModalInvoice" style="font-size:0.75rem; color:#64748b; margin-top:2px;"></p>
+                </div>
+                <button type="button" class="btn btn-outline modal-close-btn" onclick="closeDiscountModal()" aria-label="Tutup">&times;</button>
+            </div>
+
+            <form onsubmit="submitDiscount(event)">
+                <div class="modal-body">
+                    <div class="cash-total-row">
+                        <span>Total Belanja</span>
+                        <strong id="discountSubtotal">Rp 0</strong>
+                    </div>
+
+                    <div id="discountCurrent" class="discount-current" style="display:none;"></div>
+
+                    <div class="toggle-service" style="margin-bottom:14px;">
+                        <div class="toggle-btn active" id="btnDiscountManual" onclick="setDiscountMode('manual')">💵 Nominal Manual</div>
+                        <div class="toggle-btn" id="btnDiscountPromo" onclick="setDiscountMode('promo')">🏷️ Kupon Promo</div>
+                    </div>
+
+                    <div id="discountManualFields">
+                        <div class="form-group">
+                            <label class="form-label" for="discountAmount">Nominal Diskon</label>
+                            <div class="cash-input-wrap">
+                                <span>Rp</span>
+                                <input type="text" id="discountAmount" class="form-control" inputmode="numeric"
+                                       autocomplete="off" placeholder="0" oninput="onDiscountInput(this)">
+                            </div>
+                        </div>
+                        <div id="discountQuickButtons" class="cash-quick-buttons"></div>
+                        <div class="form-group">
+                            <label class="form-label" for="discountNote">Keterangan <span class="form-hint" style="display:inline;">(opsional)</span></label>
+                            <input type="text" id="discountNote" class="form-control" maxlength="255" placeholder="Contoh: pelanggan tetap, kompensasi pesanan telat">
+                        </div>
+                    </div>
+
+                    <div id="discountPromoFields" style="display:none;">
+                        <div class="form-group">
+                            <label class="form-label" for="discountCode">Kode Kupon</label>
+                            <input type="text" id="discountCode" class="form-control" maxlength="30" autocomplete="off"
+                                   placeholder="HEMAT10" style="text-transform:uppercase;" oninput="updateDiscountPreview()">
+                            <small class="form-hint">Potongan dari kupon dihitung otomatis oleh sistem.</small>
+                        </div>
+                    </div>
+
+                    <div id="discountPreviewBox" class="cash-change-box">
+                        <span>Total Setelah Diskon</span>
+                        <strong id="discountPreview">Rp 0</strong>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" id="btnDiscountRemove" class="btn btn-outline-danger" style="display:none;" onclick="removeDiscount()">Hapus Diskon</button>
+                    <button type="button" class="btn btn-outline" onclick="closeDiscountModal()">Batal</button>
+                    <button type="submit" id="btnDiscountSubmit" class="btn btn-primary" disabled>✅ Pasang Diskon</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Modal Batal Pesanan (Void Order) -->
     <div class="modal-overlay" id="voidModal" onclick="if (event.target === this) closeVoidModal()">
         <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="voidModalTitle">
