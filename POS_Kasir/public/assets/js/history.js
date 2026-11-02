@@ -92,9 +92,11 @@ function renderHistoryOrders(orders) {
     }
 
     container.innerHTML = orders.map((order) => {
-        const paidBadge = order.is_paid
-            ? '<span class="brand-badge" style="background:#d1fae5; color:#059669;">✅ LUNAS</span>'
-            : '<span class="brand-badge badge-unpaid-late">⚠️ BELUM BAYAR</span>';
+        const paidBadge = order.is_canceled
+            ? '<span class="brand-badge" style="background:#f1f5f9; color:#64748b;">❌ DIBATALKAN</span>'
+            : order.is_paid
+                ? '<span class="brand-badge" style="background:#d1fae5; color:#059669;">✅ LUNAS</span>'
+                : '<span class="brand-badge badge-unpaid-late">⚠️ BELUM BAYAR</span>';
 
         const method = order.payment_method === 'cash' ? '💵 Tunai' : '📱 QRIS';
         const service = order.service_type === 'dine_in' ? '🍽️ Makan di Tempat' : '🛍️ Bungkus';
@@ -113,7 +115,7 @@ function renderHistoryOrders(orders) {
         ));
 
         return `
-            <div class="history-order ${order.is_paid ? 'is-paid' : 'is-unpaid'}">
+            <div class="history-order ${order.is_paid || order.is_canceled ? 'is-paid' : 'is-unpaid'}">
                 <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap;">
                     <div style="min-width:0;">
                         <div style="font-weight:800; font-size:1rem; color:#0f172a;">${escapeHtml(order.invoice_number)}</div>
@@ -126,7 +128,12 @@ function renderHistoryOrders(orders) {
                     </div>
                 </div>
 
-                ${!order.is_paid ? `
+                ${order.is_canceled ? `
+                    <div style="background:#f1f5f9; color:#475569; padding:10px 12px; border-radius:10px; margin-top:12px; font-size:0.83rem;">
+                        ❌ Pesanan ini <strong>dibatalkan</strong> oleh kasir.
+                    </div>` : ''}
+
+                ${!order.is_paid && !order.is_canceled ? `
                     <div style="background:#fef2f2; color:#b91c1c; padding:10px 12px; border-radius:10px; margin-top:12px; font-size:0.83rem;">
                         💸 Pesanan ini <strong>belum dibayar</strong>. Silakan bayar di kasir saat mengambil pesanan.
                     </div>` : ''}

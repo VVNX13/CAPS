@@ -138,6 +138,57 @@
             </form>
         </div>
     </div>
+
+    <!-- Modal Batal Pesanan (Void Order) -->
+    <div class="modal-overlay" id="voidModal" onclick="if (event.target === this) closeVoidModal()">
+        <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="voidModalTitle">
+            <div class="modal-sheet-handle"></div>
+
+            <div class="modal-header">
+                <div>
+                    <h3 id="voidModalTitle" style="font-size:1.15rem; font-weight:800; color:#b91c1c;">🚫 Batalkan Pesanan</h3>
+                    <p id="voidModalInvoice" style="font-size:0.75rem; color:#64748b; margin-top:2px;"></p>
+                </div>
+                <button type="button" class="btn btn-outline modal-close-btn" onclick="closeVoidModal()" aria-label="Tutup">&times;</button>
+            </div>
+
+            <form onsubmit="submitVoidOrder(event)">
+                <div class="modal-body">
+                    <div class="void-summary">
+                        <div style="font-weight:700; margin-bottom:6px; color:#334155;">Seluruh isi invoice akan dibatalkan:</div>
+                        <ul id="voidItemList" class="void-item-list"></ul>
+                        <div class="cash-total-row" style="margin-top:8px;">
+                            <span>Total Tagihan</span>
+                            <strong id="voidTotal">Rp 0</strong>
+                        </div>
+                    </div>
+
+                    <div id="voidPaidWarning" class="void-paid-warning" style="display:none;">
+                        ⚠️ Pesanan ini <strong>sudah lunas</strong>. Kembalikan uang pelanggan setelah pembatalan.
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="voidReason">Alasan Pembatalan</label>
+                        <div class="void-reason-chips">
+                            <button type="button" class="btn btn-outline btn-sm" onclick="setVoidReason(this.textContent)">Pelanggan membatalkan</button>
+                            <button type="button" class="btn btn-outline btn-sm" onclick="setVoidReason(this.textContent)">Menu habis</button>
+                            <button type="button" class="btn btn-outline btn-sm" onclick="setVoidReason(this.textContent)">Salah input pesanan</button>
+                            <button type="button" class="btn btn-outline btn-sm" onclick="setVoidReason(this.textContent)">Pesanan ganda</button>
+                        </div>
+                        <textarea id="voidReason" class="form-control" rows="2" maxlength="255"
+                                  placeholder="Tulis alasan pembatalan…" oninput="updateVoidSubmit()"></textarea>
+                    </div>
+
+                    <p style="font-size:0.78rem; color:#64748b;">Stok menu pada pesanan ini akan dikembalikan otomatis.</p>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" onclick="closeVoidModal()">Kembali</button>
+                    <button type="submit" id="btnVoidSubmit" class="btn btn-danger" disabled>🚫 Batalkan Pesanan</button>
+                </div>
+            </form>
+        </div>
+    </div>
 @endsection
 
 @push('scripts')

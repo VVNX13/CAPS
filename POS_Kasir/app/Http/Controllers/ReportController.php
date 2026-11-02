@@ -205,6 +205,7 @@ class ReportController extends Controller
             ->join('sales as s', 'si.sale_id', '=', 's.id')
             ->whereIn('c.owner_type', $ownerTypes)
             ->where('s.payment_status', 'paid')
+            ->where('s.order_status', '!=', 'canceled')
             ->whereBetween(DB::raw('DATE(si.created_at)'), [$startDate, $endDate])
             ->orderByDesc('si.created_at')
             ->get([

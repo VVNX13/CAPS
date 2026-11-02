@@ -47,6 +47,7 @@ Route::middleware('web')->group(function () {
         Route::get('/owner/orders', [OwnerDashboardController::class, 'getActiveOrders'])->name('owner.orders');
         Route::post('/owner/item/status', [OwnerDashboardController::class, 'updateItemStatus'])->name('owner.item-status');
         Route::post('/owner/payment/status', [OwnerDashboardController::class, 'updatePaymentStatus'])->name('owner.payment-status');
+        Route::post('/owner/order/cancel', [OwnerDashboardController::class, 'cancelOrder'])->name('owner.order-cancel');
 
         /* Unpaid bills, grouped by customer so the cashier can chase one person once */
         Route::get('/owner/unpaid', [ReceivableController::class, 'list'])->name('owner.unpaid.list');

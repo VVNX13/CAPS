@@ -1793,6 +1793,44 @@ body {
   pointer-events: none;
 }
 
+/* Batal pesanan (void order) */
+.btn-outline-danger {
+  background: #fff;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+.btn-outline-danger:hover { background: #fef2f2; }
+.void-summary {
+  padding: 12px 14px;
+  background: #f8fafc;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  font-size: 0.85rem;
+}
+.void-summary .cash-total-row { padding: 8px 0 0; margin-bottom: 0; background: none; border-top: 1px dashed #cbd5e1; border-radius: 0; }
+.void-item-list { list-style: none; padding: 0; margin: 0; }
+.void-item-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: #475569;
+  margin-bottom: 4px;
+}
+.void-paid-warning {
+  background: #fffbeb;
+  color: #b45309;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 0.83rem;
+  margin-bottom: 12px;
+}
+.void-reason-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
 /* ===== Struk thermal (58mm / 80mm) ===== */
 .print-controls {
   display: flex;
