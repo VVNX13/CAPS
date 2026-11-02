@@ -74,6 +74,7 @@ class CustomerHistoryController extends Controller
                 'payment_method' => $order->payment_method,
                 'payment_status' => $order->payment_status,
                 'is_paid' => $order->payment_status === 'paid',
+                'is_canceled' => $order->order_status === 'canceled',
                 'order_status' => $order->order_status,
                 'created_at' => $createdAt->format('Y-m-d H:i:s'),
                 'date_label' => $createdAt->format('d M Y, H:i'),
@@ -94,9 +95,9 @@ class CustomerHistoryController extends Controller
             'orders' => $formatted,
             'summary' => [
                 'order_count' => $formatted->count(),
-                'unpaid_count' => $formatted->where('is_paid', false)->count(),
-                'unpaid_amount' => round($formatted->where('is_paid', false)->sum('total_amount'), 2),
-                'total_spent' => round($formatted->where('is_paid', true)->sum('total_amount'), 2),
+                'unpaid_count' => $formatted->where('is_paid', false)->where('is_canceled', false)->count(),
+                'unpaid_amount' => round($formatted->where('is_paid', false)->where('is_canceled', false)->sum('total_amount'), 2),
+                'total_spent' => round($formatted->where('is_paid', true)->where('is_canceled', false)->sum('total_amount'), 2),
             ],
         ]);
     }

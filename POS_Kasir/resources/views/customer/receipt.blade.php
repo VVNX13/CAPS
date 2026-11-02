@@ -35,7 +35,7 @@
 
     <div class="container receipt-container">
         <!-- Dynamic QRIS Payment Card (Shown if QRIS and still Unpaid) -->
-        @if ($sale->payment_method === 'qris' && $sale->payment_status === 'unpaid' && $qrisData)
+        @if ($sale->payment_method === 'qris' && $sale->payment_status === 'unpaid' && ! $sale->isCanceled() && $qrisData)
             <div class="qris-pay-card no-print" id="qrisPaymentBox">
                 <div class="qris-header">
                     <div class="qris-brand-logo">
@@ -94,6 +94,18 @@
             </div>
         @endif
 
+        @if ($sale->isCanceled())
+            <div class="no-print" role="alert" style="background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; padding:12px 14px; border-radius:12px; margin-bottom:14px; font-size:0.85rem;">
+                <strong>❌ Pesanan ini telah dibatalkan</strong>
+                @if ($sale->canceled_at)
+                    <span style="color:#7f1d1d;">({{ $sale->canceled_at->format('d/m/Y H:i') }})</span>
+                @endif
+                @if ($sale->cancel_reason)
+                    <div style="margin-top:4px;">Alasan: {{ $sale->cancel_reason }}</div>
+                @endif
+            </div>
+        @endif
+
         <!-- Digital Thermal Receipt Box -->
         <div class="receipt-box" id="thermalReceipt">
             <!-- Header Struk -->
@@ -135,9 +147,15 @@
                 <div style="display:flex; justify-content:space-between;">
                     <span style="color:#64748b;">Status Bayar:</span>
                     <strong id="receiptPaymentStatus" style="color:{{ $sale->isPaid() ? '#059669' : '#dc2626' }};">
-                        {{ $sale->isPaid() ? '✅ LUNAS' : '⏳ MENUNGGU PEMBAYARAN' }}
+                        {{ $sale->isPaid() ? '✅ LUNAS' : ($sale->isCanceled() ? '—' : '⏳ MENUNGGU PEMBAYARAN') }}
                     </strong>
                 </div>
+                @if ($sale->isCanceled())
+                    <div style="display:flex; justify-content:space-between;">
+                        <span style="color:#64748b;">Status Pesanan:</span>
+                        <strong style="color:#dc2626;">❌ DIBATALKAN</strong>
+                    </div>
+                @endif
                 @if ($sale->notes)
                     <div style="display:flex; justify-content:space-between; margin-top:4px;">
                         <span style="color:#64748b;">Catatan:</span>
@@ -223,6 +241,13 @@
         <div class="thermal-print" aria-hidden="true">
             <div class="tp-center tp-title">{{ config('app.name') }}</div>
             <div class="tp-center">{{ config('app.address') }}</div>
+            @if ($sale->isCanceled())
+                <div class="tp-line"></div>
+                <div class="tp-center tp-title">*** DIBATALKAN ***</div>
+                @if ($sale->cancel_reason)
+                    <div class="tp-center">{{ $sale->cancel_reason }}</div>
+                @endif
+            @endif
             <div class="tp-line"></div>
 
             <div class="tp-row"><span>No</span><span>{{ $sale->invoice_number }}</span></div>
@@ -301,11 +326,17 @@
             }
         })();
 
-        if (currentPaymentStatus === 'unpaid') {
+        if (currentPaymentStatus === 'unpaid' && !@js($sale->isCanceled())) {
             const pollTimer = setInterval(async () => {
                 try {
                     const res = await fetch(statusUrl);
                     const data = await res.json();
+                    // Kasir membatalkan pesanan saat pelanggan masih di halaman ini.
+                    if (data.success && data.data.order_status === 'canceled') {
+                        clearInterval(pollTimer);
+                        window.location.reload();
+                        return;
+                    }
                     if (data.success && data.data.payment_status === 'paid') {
                         currentPaymentStatus = 'paid';
                         clearInterval(pollTimer);

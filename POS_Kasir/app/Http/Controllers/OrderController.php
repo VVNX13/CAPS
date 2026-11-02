@@ -240,7 +240,7 @@ class OrderController extends Controller
         }
 
         // Unpaid QRIS-ify orders are reconciled against the gateway on demand.
-        if ($sale->payment_status === 'unpaid' && $sale->qris_transaction_id) {
+        if ($sale->payment_status === 'unpaid' && ! $sale->isCanceled() && $sale->qris_transaction_id) {
             try {
                 $transaction = QrisifyService::getTransaction($sale->qris_transaction_id);
 

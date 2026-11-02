@@ -50,6 +50,7 @@ class ReceivableController extends Controller
             ->join('products as p', 'si.product_id', '=', 'p.id')
             ->join('categories as c', 'p.category_id', '=', 'c.id')
             ->where('s.payment_status', 'unpaid')
+            ->where('s.order_status', '!=', 'canceled')
             ->where('s.created_at', '>=', now()->subDays(self::CHASE_WINDOW_DAYS))
             ->whereIn('c.owner_type', $ownerTypes)
             ->groupBy('s.id', 's.invoice_number', 's.customer_name', 's.customer_phone')
@@ -199,6 +200,10 @@ class ReceivableController extends Controller
 
         if ($sale === null) {
             return ApiResponse::error('Transaksi tidak ditemukan', 404);
+        }
+
+        if ($sale->order_status === 'canceled') {
+            return ApiResponse::error('Pesanan ini sudah dibatalkan', 422);
         }
 
         DB::table('sales')->where('id', $saleId)->update(['payment_status' => 'paid']);

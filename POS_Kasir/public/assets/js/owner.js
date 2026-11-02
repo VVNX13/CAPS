@@ -43,6 +43,7 @@ function initOwnerPolling(ownerTypes, workingLabel) {
   // Tutup modal kalkulator kembalian dengan tombol Esc
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && cashModalState) closeCashModal();
+    if (e.key === 'Escape' && voidModalState) closeVoidModal();
   });
 
   // Polling setiap 5 detik
@@ -230,6 +231,9 @@ function renderOrderCards(orders) {
         <div style="display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;">
           <a class="btn btn-outline btn-sm" href="/receipt/${encodeURIComponent(order.invoice_number)}?print=1"
              target="_blank" rel="noopener" title="Cetak struk thermal">🖨️ Struk</a>
+          <button class="btn btn-outline-danger btn-sm" onclick="openVoidModal(${order.sale_id})" title="Batalkan seluruh pesanan">
+            🚫 Batalkan
+          </button>
           ${order.payment_status === 'unpaid' ? `
             <button class="btn btn-warning btn-sm" onclick="confirmPayment(${order.sale_id})">
               💵 Terima Bayar Kasir
@@ -402,6 +406,77 @@ async function markSalePaid(saleId, successMessage, cashReceived = null) {
   return false;
 }
 
+// ===== Batal Pesanan (Void Order) =====
+let voidModalState = null; // { saleId }
+
+function openVoidModal(saleId) {
+  const lines = currentOrdersCache.filter(o => o.sale_id === saleId);
+  if (lines.length === 0) return;
+  const order = lines[0];
+  voidModalState = { saleId };
+
+  document.getElementById('voidModalInvoice').textContent =
+    `Inv: ${order.invoice_number} • ${order.customer_name}${order.table_number ? ' • Meja ' + order.table_number : ''}`;
+  document.getElementById('voidItemList').innerHTML = lines.map(l => `
+    <li><span>${escapeHtml(l.product_name)} &times; ${l.quantity}</span><span>${formatRupiah(l.subtotal)}</span></li>
+  `).join('');
+  document.getElementById('voidTotal').textContent = formatRupiah(order.total_amount);
+  document.getElementById('voidPaidWarning').style.display = order.payment_status === 'paid' ? '' : 'none';
+
+  const reason = document.getElementById('voidReason');
+  reason.value = '';
+  updateVoidSubmit();
+
+  document.getElementById('voidModal').classList.add('active');
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => reason.focus(), 50);
+}
+
+function closeVoidModal() {
+  document.getElementById('voidModal').classList.remove('active');
+  document.body.style.overflow = '';
+  voidModalState = null;
+}
+
+function setVoidReason(text) {
+  document.getElementById('voidReason').value = text.trim();
+  updateVoidSubmit();
+}
+
+function updateVoidSubmit() {
+  const reason = document.getElementById('voidReason').value.trim();
+  document.getElementById('btnVoidSubmit').disabled = reason.length < 3;
+}
+
+async function submitVoidOrder(e) {
+  e.preventDefault();
+  if (!voidModalState) return;
+
+  const reason = document.getElementById('voidReason').value.trim();
+  if (reason.length < 3) return;
+
+  const btn = document.getElementById('btnVoidSubmit');
+  btn.disabled = true;
+
+  try {
+    const res = await fetch('/api/owner/order/cancel', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ sale_id: voidModalState.saleId, reason })
+    });
+    const result = await res.json();
+    if (result.success) {
+      closeVoidModal();
+      showToast(escapeHtml(result.message));
+      loadDashboardData();
+      return;
+    }
+    alert('Gagal membatalkan: ' + result.message);
+  } catch (err) {
+    alert('Gagal membatalkan: ' + err.message);
+  }
+  btn.disabled = false;
+}
 
 function formatRupiah(num) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num);

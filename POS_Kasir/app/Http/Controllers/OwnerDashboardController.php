@@ -38,6 +38,7 @@ class OwnerDashboardController extends Controller
             ->join('categories as c', 'p.category_id', '=', 'c.id')
             ->join('sales as s', 'si.sale_id', '=', 's.id')
             ->whereIn('c.owner_type', $ownerTypes)
+            ->where('s.order_status', '!=', 'canceled')
             ->orderByRaw("CASE si.item_status
                 WHEN 'pending' THEN 1
                 WHEN 'cooking' THEN 2
@@ -76,6 +77,7 @@ class OwnerDashboardController extends Controller
             ->join('categories as c', 'p.category_id', '=', 'c.id')
             ->join('sales as s', 'si.sale_id', '=', 's.id')
             ->whereIn('c.owner_type', $ownerTypes)
+            ->where('s.order_status', '!=', 'canceled')
             ->selectRaw("COUNT(CASE WHEN si.item_status = 'pending' THEN 1 END) AS pending_count")
             ->selectRaw("COUNT(CASE WHEN si.item_status = 'cooking' THEN 1 END) AS cooking_count")
             ->selectRaw("COUNT(CASE WHEN si.item_status = 'done' AND DATE(si.created_at) = ? THEN 1 END) AS done_today", [$today])
@@ -104,6 +106,16 @@ class OwnerDashboardController extends Controller
             'item_id' => ['required', 'integer'],
             'status' => ['required', 'in:pending,cooking,done'],
         ]);
+
+        $canceled = DB::table('sale_items as si')
+            ->join('sales as s', 'si.sale_id', '=', 's.id')
+            ->where('si.id', $data['item_id'])
+            ->where('s.order_status', 'canceled')
+            ->exists();
+
+        if ($canceled) {
+            return ApiResponse::error('Pesanan ini sudah dibatalkan', 422);
+        }
 
         DB::table('sale_items')->where('id', $data['item_id'])->update(['item_status' => $data['status']]);
 
@@ -138,7 +150,11 @@ class OwnerDashboardController extends Controller
             return ApiResponse::error('Transaksi tidak ditemukan dalam cakupan Anda', 404);
         }
 
-        $sale = DB::table('sales')->where('id', $saleId)->first(['payment_method', 'total_amount']);
+        $sale = DB::table('sales')->where('id', $saleId)->first(['payment_method', 'total_amount', 'order_status']);
+
+        if ($sale->order_status === 'canceled') {
+            return ApiResponse::error('Pesanan ini sudah dibatalkan, pembayaran tidak bisa diubah', 422);
+        }
 
         $update = [
             'payment_status' => $data['payment_status'],
@@ -165,5 +181,85 @@ class OwnerDashboardController extends Controller
             null,
             "Status pembayaran transaksi #{$saleId} telah diupdate ke {$data['payment_status']}"
         );
+    }
+
+    /**
+     * Batalkan seluruh pesanan (void order) dan kembalikan stok menunya.
+     *
+     * Pembatalan berlaku untuk satu transaksi utuh, sama seperti pembayaran,
+     * karena satu invoice tidak bisa dibatalkan sebagian. Semuanya berjalan
+     * dalam satu transaksi DB dengan row lock supaya klik ganda atau dua kasir
+     * yang membatalkan bersamaan tidak mengembalikan stok dua kali.
+     */
+    public function cancelOrder(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'sale_id' => ['required', 'integer'],
+            'reason' => ['required', 'string', 'min:3', 'max:255'],
+        ], [
+            'reason.required' => 'Alasan pembatalan wajib diisi',
+            'reason.min' => 'Alasan pembatalan minimal 3 karakter',
+        ]);
+
+        $saleId = (int) $data['sale_id'];
+
+        $visible = DB::table('sale_items as si')
+            ->join('products as p', 'si.product_id', '=', 'p.id')
+            ->join('categories as c', 'p.category_id', '=', 'c.id')
+            ->where('si.sale_id', $saleId)
+            ->whereIn('c.owner_type', $request->user()->ownerTypes())
+            ->exists();
+
+        if (! $visible) {
+            return ApiResponse::error('Transaksi tidak ditemukan dalam cakupan Anda', 404);
+        }
+
+        $result = DB::transaction(function () use ($saleId, $data, $request) {
+            $sale = DB::table('sales')->where('id', $saleId)->lockForUpdate()->first();
+
+            if ($sale->order_status === 'canceled') {
+                return null;
+            }
+
+            $items = DB::table('sale_items')
+                ->where('sale_id', $saleId)
+                ->selectRaw('product_id, SUM(quantity) AS quantity')
+                ->groupBy('product_id')
+                ->get();
+
+            // Kunci baris produk dulu (urut id) supaya penambahan stok tidak bentrok dengan checkout.
+            $productIds = $items->pluck('product_id')->sort()->values();
+            DB::table('products')->whereIn('id', $productIds)->orderBy('id')->lockForUpdate()->get(['id']);
+
+            foreach ($items as $item) {
+                DB::table('products')->where('id', $item->product_id)->increment('stock', (int) $item->quantity);
+            }
+
+            DB::table('sales')->where('id', $saleId)->update([
+                'order_status' => 'canceled',
+                'canceled_at' => now(),
+                'canceled_by' => $request->user()->id,
+                'cancel_reason' => trim($data['reason']),
+                'updated_at' => now(),
+            ]);
+
+            return [
+                'invoice_number' => $sale->invoice_number,
+                'was_paid' => $sale->payment_status === 'paid',
+                'restocked_items' => (int) $items->sum('quantity'),
+            ];
+        });
+
+        if ($result === null) {
+            return ApiResponse::error('Pesanan ini sudah dibatalkan sebelumnya', 422);
+        }
+
+        $message = "Pesanan {$result['invoice_number']} dibatalkan, {$result['restocked_items']} porsi dikembalikan ke stok";
+
+        if ($result['was_paid']) {
+            $message .= '. Pesanan sudah lunas, jangan lupa kembalikan uang pelanggan';
+        }
+
+        return ApiResponse::success($result, $message);
     }
 }
