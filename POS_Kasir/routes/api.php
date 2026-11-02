@@ -1,9 +1,11 @@
 <?php
 
 use App\Http\Controllers\CustomerHistoryController;
+use App\Http\Controllers\DiscountController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\OwnerDashboardController;
 use App\Http\Controllers\PollingController;
+use App\Http\Controllers\PromoCodeController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\QrisController;
@@ -37,6 +39,11 @@ Route::middleware('web')->group(function () {
         Route::get('/orders/history', [CustomerHistoryController::class, 'show'])->name('orders.history');
     });
 
+    // Pratinjau kupon di keranjang. Dibatasi supaya kode kupon tidak bisa ditebak beruntun.
+    Route::post('/promo/check', [DiscountController::class, 'check'])
+        ->middleware('throttle:20,1')
+        ->name('promo.check');
+
     /* Owner facing */
     Route::middleware('auth')->group(function () {
         // Owner-internal polling only. Each item carries the customer name, phone
@@ -48,6 +55,7 @@ Route::middleware('web')->group(function () {
         Route::post('/owner/item/status', [OwnerDashboardController::class, 'updateItemStatus'])->name('owner.item-status');
         Route::post('/owner/payment/status', [OwnerDashboardController::class, 'updatePaymentStatus'])->name('owner.payment-status');
         Route::post('/owner/order/cancel', [OwnerDashboardController::class, 'cancelOrder'])->name('owner.order-cancel');
+        Route::post('/owner/order/discount', [DiscountController::class, 'apply'])->name('owner.order-discount');
 
         /* Unpaid bills, grouped by customer so the cashier can chase one person once */
         Route::get('/owner/unpaid', [ReceivableController::class, 'list'])->name('owner.unpaid.list');
@@ -72,6 +80,11 @@ Route::middleware('web')->group(function () {
 
             Route::get('/owner/qrisify/settings', [QrisifyController::class, 'getSettings'])->name('owner.qrisify.get');
             Route::post('/owner/qrisify/settings', [QrisifyController::class, 'saveSettings'])->name('owner.qrisify.save');
+
+            Route::get('/owner/promos', [PromoCodeController::class, 'list'])->name('owner.promos.list');
+            Route::post('/owner/promos', [PromoCodeController::class, 'save'])->name('owner.promos.save');
+            Route::post('/owner/promos/{promo}/toggle', [PromoCodeController::class, 'toggle'])->name('owner.promos.toggle');
+            Route::delete('/owner/promos/{promo}', [PromoCodeController::class, 'destroy'])->name('owner.promos.destroy');
 
             Route::get('/owner/webhook/config', [WebhookController::class, 'getConfig'])->name('owner.webhook.config');
             Route::post('/owner/webhook/secret/regenerate', [WebhookController::class, 'regenerateSecret'])->name('owner.webhook.regenerate');

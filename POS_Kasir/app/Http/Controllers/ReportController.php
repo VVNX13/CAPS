@@ -44,7 +44,9 @@ class ReportController extends Controller
             'end_date' => $endDate,
             'owner_type' => $user->ownerTypes(),
             'scope_label' => $user->scopeLabel(),
-            'total_revenue' => (float) $rows->sum('subtotal'),
+            'gross_revenue' => (float) $rows->sum('subtotal'),
+            'total_discount' => (float) $rows->sum('discount'),
+            'total_revenue' => (float) $rows->sum('net_subtotal'),
             'total_items_sold' => (int) $rows->sum('quantity'),
             'total_orders' => $rows->pluck('invoice_number')->unique()->count(),
             'items' => $rows,
@@ -66,17 +68,17 @@ class ReportController extends Controller
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Laporan Penjualan');
 
-        $sheet->mergeCells('A1:H1');
+        $sheet->mergeCells('A1:J1');
         $sheet->setCellValue('A1', 'LAPORAN PENJUALAN - '.$fileScope);
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
         $sheet->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
-        $sheet->mergeCells('A2:H2');
+        $sheet->mergeCells('A2:J2');
         $sheet->setCellValue('A2', "Periode: {$startDate} s/d {$endDate}");
         $sheet->getStyle('A2')->getFont()->setItalic(true);
         $sheet->getStyle('A2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
-        $headers = ['No', 'No. Invoice', 'Tanggal & Waktu', 'Nama Pelanggan', 'Nama Produk', 'Jumlah', 'Harga Satuan (Rp)', 'Subtotal (Rp)'];
+        $headers = ['No', 'No. Invoice', 'Tanggal & Waktu', 'Nama Pelanggan', 'Nama Produk', 'Jumlah', 'Harga Satuan (Rp)', 'Subtotal (Rp)', 'Diskon (Rp)', 'Netto (Rp)'];
         $col = 'A';
         foreach ($headers as $header) {
             $sheet->setCellValue($col.'4', $header);
@@ -100,22 +102,25 @@ class ReportController extends Controller
             $sheet->setCellValue("F{$rowNum}", $item->quantity);
             $sheet->setCellValue("G{$rowNum}", $item->unit_price);
             $sheet->setCellValue("H{$rowNum}", $item->subtotal);
+            $sheet->setCellValue("I{$rowNum}", $item->discount);
+            $sheet->setCellValue("J{$rowNum}", $item->net_subtotal);
 
             $sheet->getStyle("F{$rowNum}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-            $sheet->getStyle("G{$rowNum}")->getNumberFormat()->setFormatCode('#,##0');
-            $sheet->getStyle("H{$rowNum}")->getNumberFormat()->setFormatCode('#,##0');
+            $sheet->getStyle("G{$rowNum}:J{$rowNum}")->getNumberFormat()->setFormatCode('#,##0');
 
-            $grandTotal += (float) $item->subtotal;
+            $grandTotal += (float) $item->net_subtotal;
             $rowNum++;
         }
 
         $sheet->mergeCells("A{$rowNum}:G{$rowNum}");
-        $sheet->setCellValue("A{$rowNum}", 'TOTAL PENDAPATAN (OMSET)');
-        $sheet->setCellValue("H{$rowNum}", $grandTotal);
-        $sheet->getStyle("A{$rowNum}:H{$rowNum}")->getFont()->setBold(true);
-        $sheet->getStyle("H{$rowNum}")->getNumberFormat()->setFormatCode('#,##0');
+        $sheet->setCellValue("A{$rowNum}", 'TOTAL PENDAPATAN (OMSET BERSIH)');
+        $sheet->setCellValue("H{$rowNum}", (float) $rows->sum('subtotal'));
+        $sheet->setCellValue("I{$rowNum}", (float) $rows->sum('discount'));
+        $sheet->setCellValue("J{$rowNum}", $grandTotal);
+        $sheet->getStyle("A{$rowNum}:J{$rowNum}")->getFont()->setBold(true);
+        $sheet->getStyle("H{$rowNum}:J{$rowNum}")->getNumberFormat()->setFormatCode('#,##0');
 
-        foreach (range('A', 'H') as $colId) {
+        foreach (range('A', 'J') as $colId) {
             $sheet->getColumnDimension($colId)->setAutoSize(true);
         }
 
@@ -153,7 +158,9 @@ class ReportController extends Controller
             'scopeLabel' => $user->scopeLabel(),
             'startDate' => $startDate,
             'endDate' => $endDate,
-            'totalRevenue' => (float) $rows->sum('subtotal'),
+            'grossRevenue' => (float) $rows->sum('subtotal'),
+            'totalDiscount' => (float) $rows->sum('discount'),
+            'totalRevenue' => (float) $rows->sum('net_subtotal'),
             'totalItems' => (int) $rows->sum('quantity'),
         ])->render());
         $dompdf->setPaper('A4', 'portrait');
@@ -199,7 +206,7 @@ class ReportController extends Controller
      */
     private function queryReportData(array $ownerTypes, string $startDate, string $endDate): Collection
     {
-        return DB::table('sale_items as si')
+        $rows = DB::table('sale_items as si')
             ->join('products as p', 'si.product_id', '=', 'p.id')
             ->join('categories as c', 'p.category_id', '=', 'c.id')
             ->join('sales as s', 'si.sale_id', '=', 's.id')
@@ -208,7 +215,7 @@ class ReportController extends Controller
             ->where('s.order_status', '!=', 'canceled')
             ->whereBetween(DB::raw('DATE(si.created_at)'), [$startDate, $endDate])
             ->orderByDesc('si.created_at')
-            ->get([
+            ->select([
                 'si.id as item_id',
                 'si.quantity',
                 'si.unit_price',
@@ -223,6 +230,18 @@ class ReportController extends Controller
                 's.service_type',
                 's.payment_method',
                 's.payment_status',
-            ]);
+                's.promo_code',
+            ])
+            ->selectRaw('CASE WHEN COALESCE(s.subtotal_amount, 0) > 0 THEN si.subtotal * s.total_amount / s.subtotal_amount ELSE si.subtotal END AS net_subtotal')
+            ->get();
+
+        // Diskon dicatat per transaksi; tiap item menanggung bagian sesuai porsi harganya.
+        return $rows->map(function ($row) {
+            $row->subtotal = (float) $row->subtotal;
+            $row->net_subtotal = round((float) $row->net_subtotal, 2);
+            $row->discount = round($row->subtotal - $row->net_subtotal, 2);
+
+            return $row;
+        });
     }
 }

@@ -192,6 +192,19 @@
 
             <div class="receipt-divider"></div>
 
+            @if ((float) $sale->discount_amount > 0)
+                <div style="font-size:0.85rem; line-height:1.7; margin-bottom:4px;">
+                    <div style="display:flex; justify-content:space-between;">
+                        <span style="color:#64748b;">Subtotal:</span>
+                        <span>{{ rupiah($sale->subtotal_amount) }}</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; color:#047857; font-weight:700;">
+                        <span>{{ $sale->discount_note ?: 'Diskon' }}:</span>
+                        <span>-{{ rupiah($sale->discount_amount) }}</span>
+                    </div>
+                </div>
+            @endif
+
             <!-- Total Amount -->
             <div style="display:flex; justify-content:space-between; align-items:center; font-size:1.15rem; font-weight:800;">
                 <span>TOTAL AKHIR:</span>
@@ -273,6 +286,10 @@
             @endforeach
             <div class="tp-line"></div>
 
+            @if ((float) $sale->discount_amount > 0)
+                <div class="tp-row"><span>Subtotal</span><span>{{ rupiah($sale->subtotal_amount, false) }}</span></div>
+                <div class="tp-row"><span>{{ $sale->promo_code ? 'Kupon '.$sale->promo_code : 'Diskon' }}</span><span>-{{ rupiah($sale->discount_amount, false) }}</span></div>
+            @endif
             <div class="tp-row tp-total"><span>TOTAL</span><span>{{ rupiah($sale->total_amount) }}</span></div>
             @if ($sale->payment_method === 'cash' && $sale->cash_received !== null)
                 <div class="tp-row"><span>Tunai</span><span>{{ rupiah($sale->cash_received) }}</span></div>

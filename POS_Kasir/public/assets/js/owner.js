@@ -44,6 +44,7 @@ function initOwnerPolling(ownerTypes, workingLabel) {
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && cashModalState) closeCashModal();
     if (e.key === 'Escape' && voidModalState) closeVoidModal();
+    if (e.key === 'Escape' && discountModalState) closeDiscountModal();
   });
 
   // Polling setiap 5 detik
@@ -226,6 +227,8 @@ function renderOrderCards(orders) {
           </div>
         </div>
 
+        ${Number(order.discount_amount) > 0 ? `<div class="order-discount-note">🏷️ ${escapeHtml(order.discount_note || 'Diskon')}: -${formatRupiah(order.discount_amount)} &bull; Tagihan ${formatRupiah(order.total_amount)}</div>` : ''}
+
         ${order.notes ? `<div style="font-size:0.8rem; background:#fffbeb; padding:6px 10px; border-radius:8px; margin-bottom:12px; color:#b45309;">📝 Catatan Pesanan: ${escapeHtml(order.notes)}</div>` : ''}
 
         <div style="display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;">
@@ -235,6 +238,9 @@ function renderOrderCards(orders) {
             🚫 Batalkan
           </button>
           ${order.payment_status === 'unpaid' ? `
+            <button class="btn btn-outline btn-sm" onclick="openDiscountModal(${order.sale_id})" title="Potongan harga / kupon">
+              🏷️ Diskon
+            </button>
             <button class="btn btn-warning btn-sm" onclick="confirmPayment(${order.sale_id})">
               💵 Terima Bayar Kasir
             </button>
@@ -404,6 +410,147 @@ async function markSalePaid(saleId, successMessage, cashReceived = null) {
     alert('Error: ' + e.message);
   }
   return false;
+}
+
+// ===== Potongan Harga / Diskon =====
+let discountModalState = null; // { saleId, subtotal, mode }
+
+function openDiscountModal(saleId) {
+  const order = currentOrdersCache.find(o => o.sale_id === saleId);
+  if (!order) return;
+
+  const subtotal = Math.round(Number(order.subtotal_amount ?? order.total_amount) || 0);
+  const current = Math.round(Number(order.discount_amount) || 0);
+  discountModalState = { saleId, subtotal, mode: 'manual' };
+
+  document.getElementById('discountModalInvoice').textContent =
+    `Inv: ${order.invoice_number} • ${order.customer_name}`;
+  document.getElementById('discountSubtotal').textContent = formatRupiah(subtotal);
+
+  const currentBox = document.getElementById('discountCurrent');
+  currentBox.style.display = current > 0 ? '' : 'none';
+  currentBox.textContent = current > 0
+    ? `Diskon saat ini: ${order.discount_note || 'Diskon'} (-${formatRupiah(current)}). Diskon baru akan menggantikannya.`
+    : '';
+  document.getElementById('btnDiscountRemove').style.display = current > 0 ? '' : 'none';
+
+  document.getElementById('discountAmount').value = '';
+  document.getElementById('discountNote').value = '';
+  document.getElementById('discountCode').value = '';
+  renderDiscountQuickButtons(subtotal);
+  setDiscountMode(order.promo_code ? 'promo' : 'manual');
+
+  document.getElementById('discountModal').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeDiscountModal() {
+  document.getElementById('discountModal').classList.remove('active');
+  document.body.style.overflow = '';
+  discountModalState = null;
+}
+
+function setDiscountMode(mode) {
+  if (!discountModalState) return;
+  discountModalState.mode = mode;
+  document.getElementById('btnDiscountManual').classList.toggle('active', mode === 'manual');
+  document.getElementById('btnDiscountPromo').classList.toggle('active', mode === 'promo');
+  document.getElementById('discountManualFields').style.display = mode === 'manual' ? '' : 'none';
+  document.getElementById('discountPromoFields').style.display = mode === 'promo' ? '' : 'none';
+  document.getElementById('discountPreviewBox').style.display = mode === 'manual' ? '' : 'none';
+  updateDiscountPreview();
+  setTimeout(() => document.getElementById(mode === 'manual' ? 'discountAmount' : 'discountCode').focus(), 50);
+}
+
+// Saran cepat: 5%, 10%, 20% dari total, dibulatkan ke bawah ke ribuan.
+function renderDiscountQuickButtons(subtotal) {
+  const amounts = [5, 10, 20]
+    .map(pct => ({ pct, amount: Math.floor(subtotal * pct / 100 / 1000) * 1000 }))
+    .filter(x => x.amount > 0);
+
+  document.getElementById('discountQuickButtons').innerHTML = amounts.map(x => `
+    <button type="button" class="btn btn-outline btn-sm" onclick="setDiscountAmount(${x.amount})">
+      ${x.pct}% • ${formatRupiah(x.amount)}
+    </button>
+  `).join('');
+}
+
+function onDiscountInput(input) {
+  const value = parseCashValue(input.value);
+  input.value = value ? value.toLocaleString('id-ID') : '';
+  updateDiscountPreview();
+}
+
+function setDiscountAmount(amount) {
+  document.getElementById('discountAmount').value = amount.toLocaleString('id-ID');
+  updateDiscountPreview();
+}
+
+function updateDiscountPreview() {
+  if (!discountModalState) return;
+  const { subtotal, mode } = discountModalState;
+  const btn = document.getElementById('btnDiscountSubmit');
+
+  if (mode === 'promo') {
+    btn.disabled = document.getElementById('discountCode').value.trim() === '';
+    return;
+  }
+
+  const amount = parseCashValue(document.getElementById('discountAmount').value);
+  const valid = amount > 0 && amount <= subtotal;
+  const box = document.getElementById('discountPreviewBox');
+  document.getElementById('discountPreview').textContent =
+    amount > subtotal ? 'Melebihi total' : formatRupiah(subtotal - amount);
+  box.classList.toggle('is-ok', valid);
+  box.classList.toggle('is-short', amount > subtotal);
+  btn.disabled = !valid;
+}
+
+async function sendDiscount(payload) {
+  try {
+    const res = await fetch('/api/owner/order/discount', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const result = await res.json();
+    if (result.success) {
+      closeDiscountModal();
+      showToast(escapeHtml(result.message));
+      loadDashboardData();
+      return true;
+    }
+    const firstError = result.errors ? Object.values(result.errors).flat()[0] : null;
+    alert(firstError || result.message);
+  } catch (err) {
+    alert('Gagal menyimpan diskon: ' + err.message);
+  }
+  return false;
+}
+
+async function submitDiscount(e) {
+  e.preventDefault();
+  if (!discountModalState) return;
+
+  const { saleId, mode } = discountModalState;
+  const payload = mode === 'promo'
+    ? { sale_id: saleId, mode, code: document.getElementById('discountCode').value.trim().toUpperCase() }
+    : {
+        sale_id: saleId,
+        mode,
+        amount: parseCashValue(document.getElementById('discountAmount').value),
+        note: document.getElementById('discountNote').value.trim()
+      };
+
+  const btn = document.getElementById('btnDiscountSubmit');
+  btn.disabled = true;
+  if (!(await sendDiscount(payload))) btn.disabled = false;
+}
+
+async function removeDiscount() {
+  if (!discountModalState) return;
+  if (!confirm('Hapus diskon dari tagihan ini?')) return;
+  await sendDiscount({ sale_id: discountModalState.saleId, mode: 'remove' });
 }
 
 // ===== Batal Pesanan (Void Order) =====

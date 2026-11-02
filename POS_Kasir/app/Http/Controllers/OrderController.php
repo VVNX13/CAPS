@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Events\OrderPlaced;
+use App\Exceptions\DiscountException;
 use App\Models\Product;
 use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Rules\IndonesianPhoneNumber;
+use App\Services\DiscountService;
 use App\Services\QrisifyService;
 use App\Support\ApiResponse;
 use App\Support\PhoneNumber;
@@ -24,7 +26,7 @@ class OrderController extends Controller
     /**
      * Create an order from the customer cart.
      */
-    public function checkout(Request $request): JsonResponse
+    public function checkout(Request $request, DiscountService $discounts): JsonResponse
     {
         $data = $request->validate([
             'customer_name' => ['required', 'string', 'max:100'],
@@ -34,6 +36,7 @@ class OrderController extends Controller
             'table_number' => ['nullable', 'string', 'max:10', 'regex:/^[A-Za-z0-9\- ]+$/'],
             'payment_method' => ['required', 'in:qris,cash'],
             'notes' => ['nullable', 'string'],
+            'promo_code' => ['nullable', 'string', 'max:30'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_id' => ['required', 'integer', 'exists:products,id'],
             'items.*.quantity' => ['required', 'integer', 'min:1'],
@@ -67,7 +70,7 @@ class OrderController extends Controller
         $productIds = $items->pluck('product_id')->unique()->values();
 
         try {
-            $sale = DB::transaction(function () use ($data, $items, $productIds): Sale {
+            $sale = DB::transaction(function () use ($data, $items, $productIds, $discounts): Sale {
                 // Lock the touched products so concurrent checkouts cannot oversell stock.
                 $products = Product::whereIn('id', $productIds)
                     ->lockForUpdate()
@@ -112,6 +115,17 @@ class OrderController extends Controller
                     ];
                 }
 
+                // Kupon dihitung ulang di server dari harga asli, bukan dari angka yang dikirim browser.
+                $subtotalAmount = $totalAmount;
+                $discountAmount = 0.0;
+                $promoCode = null;
+
+                if (filled($data['promo_code'] ?? null)) {
+                    [$promo, $discountAmount] = $discounts->claimPromo($data['promo_code'], $subtotalAmount);
+                    $promoCode = $promo->code;
+                    $totalAmount = $subtotalAmount - $discountAmount;
+                }
+
                 $invoiceNumber = 'INV-'.now()->format('Ymd').'-'.Str::upper(Str::random(4));
 
                 $qrisPayload = null;
@@ -142,6 +156,10 @@ class OrderController extends Controller
                     'customer_email' => $data['customer_email'] ?? null,
                     'service_type' => $data['service_type'],
                     'table_number' => $data['table_number'],
+                    'subtotal_amount' => $subtotalAmount,
+                    'discount_amount' => $discountAmount,
+                    'promo_code' => $promoCode,
+                    'discount_note' => $promoCode ? 'Kupon '.$promoCode : null,
                     'total_amount' => $totalAmount,
                     'qris_amount_total' => $qrisAmountTotal,
                     'payment_method' => $data['payment_method'],
@@ -156,6 +174,8 @@ class OrderController extends Controller
 
                 return $sale;
             });
+        } catch (DiscountException $e) {
+            return ApiResponse::error($e->getMessage(), 422, ['promo_code' => [$e->getMessage()]]);
         } catch (RuntimeException $e) {
             return ApiResponse::error($e->getMessage(), 500);
         }
@@ -175,6 +195,8 @@ class OrderController extends Controller
             'sale_id' => $sale->id,
             'invoice_number' => $sale->invoice_number,
             'customer_name' => $sale->customer_name,
+            'subtotal_amount' => (float) $sale->subtotal_amount,
+            'discount_amount' => (float) $sale->discount_amount,
             'total_amount' => $totalAmount,
             'payment_method' => $sale->payment_method,
             'payment_status' => $sale->payment_status,

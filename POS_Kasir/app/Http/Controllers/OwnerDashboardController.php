@@ -66,6 +66,10 @@ class OwnerDashboardController extends Controller
                 's.table_number',
                 's.payment_method',
                 's.payment_status',
+                's.subtotal_amount',
+                's.discount_amount',
+                's.promo_code',
+                's.discount_note',
                 's.total_amount',
                 's.notes',
             ]);
@@ -81,7 +85,8 @@ class OwnerDashboardController extends Controller
             ->selectRaw("COUNT(CASE WHEN si.item_status = 'pending' THEN 1 END) AS pending_count")
             ->selectRaw("COUNT(CASE WHEN si.item_status = 'cooking' THEN 1 END) AS cooking_count")
             ->selectRaw("COUNT(CASE WHEN si.item_status = 'done' AND DATE(si.created_at) = ? THEN 1 END) AS done_today", [$today])
-            ->selectRaw("COALESCE(SUM(CASE WHEN s.payment_status = 'paid' AND DATE(si.created_at) = ? THEN si.subtotal ELSE 0 END), 0) AS revenue_today", [$today])
+            // Omzet bersih: diskon transaksi dibagi rata ke itemnya sesuai porsi harga.
+            ->selectRaw("COALESCE(SUM(CASE WHEN s.payment_status = 'paid' AND DATE(si.created_at) = ? THEN CASE WHEN COALESCE(s.subtotal_amount, 0) > 0 THEN si.subtotal * s.total_amount / s.subtotal_amount ELSE si.subtotal END ELSE 0 END), 0) AS revenue_today", [$today])
             ->first();
 
         $lastId = DB::table('sale_items as si')
@@ -233,6 +238,11 @@ class OwnerDashboardController extends Controller
 
             foreach ($items as $item) {
                 DB::table('products')->where('id', $item->product_id)->increment('stock', (int) $item->quantity);
+            }
+
+            // Kupon yang terpakai pesanan ini bisa dipakai lagi.
+            if ($sale->promo_code) {
+                DB::table('promo_codes')->where('code', $sale->promo_code)->where('used_count', '>', 0)->decrement('used_count');
             }
 
             DB::table('sales')->where('id', $saleId)->update([
