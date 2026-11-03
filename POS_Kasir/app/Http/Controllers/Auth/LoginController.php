@@ -24,9 +24,14 @@ class LoginController extends Controller
 
     /**
      * Authenticate with the account username.
+     *
+     * The login page posts a plain HTML form and gets a redirect back; JSON
+     * clients (postJson, fetch with Accept: application/json) get JSON.
      */
-    public function store(Request $request): JsonResponse
+    public function store(Request $request): JsonResponse|RedirectResponse
     {
+        $wantsJson = $request->expectsJson();
+
         try {
             $credentials = $request->validate([
                 'username' => ['required', 'string'],
@@ -36,19 +41,29 @@ class LoginController extends Controller
                 'password.required' => 'Username dan password wajib diisi',
             ]);
         } catch (ValidationException $e) {
-            return ApiResponse::error($e->validator->errors()->first(), 422, $e->errors());
+            $message = $e->validator->errors()->first();
+
+            return $wantsJson
+                ? ApiResponse::error($message, 422, $e->errors())
+                : back()->withErrors(['login' => $message])->onlyInput('username');
         }
 
         if (! Auth::attempt([
             'username' => $credentials['username'],
             'password' => $credentials['password'],
         ])) {
-            return ApiResponse::error('Username atau password salah');
+            return $wantsJson
+                ? ApiResponse::error('Username atau password salah')
+                : back()->withErrors(['login' => 'Username atau password salah'])->onlyInput('username');
         }
 
         $request->session()->regenerate();
 
         $user = $request->user();
+
+        if (! $wantsJson) {
+            return redirect()->route('owner.dashboard');
+        }
 
         return ApiResponse::success([
             'redirect' => route('owner.dashboard'),

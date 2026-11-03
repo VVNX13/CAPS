@@ -46,7 +46,12 @@
                     <td>{{ $row->customer_name }}</td>
                     <td>{{ $row->product_name }}<br><span style="font-size:9px; color:#64748b;">{{ $row->category_name }}</span></td>
                     <td class="text-center">{{ $row->quantity }}</td>
-                    <td class="text-right">{{ rupiah($row->subtotal) }}</td>
+                    <td class="text-right">
+                        {{ rupiah($row->net_subtotal) }}
+                        @if ($row->discount > 0)
+                            <br><span style="font-size:9px; color:#047857;">diskon -{{ rupiah($row->discount) }}</span>
+                        @endif
+                    </td>
                 </tr>
             @empty
                 <tr><td colspan="7" class="text-center">Tidak ada transaksi lunas pada periode ini.</td></tr>
@@ -60,6 +65,16 @@
                 <td>Total Item Terjual</td>
                 <td class="text-right"><strong>{{ $totalItems }} item</strong></td>
             </tr>
+            @if ($totalDiscount > 0)
+                <tr>
+                    <td>Omset Kotor</td>
+                    <td class="text-right">{{ rupiah($grossRevenue) }}</td>
+                </tr>
+                <tr>
+                    <td>Total Diskon</td>
+                    <td class="text-right">-{{ rupiah($totalDiscount) }}</td>
+                </tr>
+            @endif
             <tr class="total-highlight">
                 <td>TOTAL OMSET</td>
                 <td class="text-right">{{ rupiah($totalRevenue) }}</td>

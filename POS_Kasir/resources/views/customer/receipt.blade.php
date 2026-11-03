@@ -12,11 +12,10 @@
 @endphp
 
 @push('head')
+    {{-- Kertas thermal: 58mm (lebar cetak ±48mm) atau 80mm (±72mm). Tanpa margin halaman. --}}
     <style>
         @media print {
-            body { background: #fff !important; padding: 0 !important; }
-            .navbar, .no-print, .qris-pay-card, .receipt-actions { display: none !important; }
-            .receipt-box { box-shadow: none !important; border: none !important; margin: 0 auto !important; width: 100% !important; max-width: 100% !important; padding: 0 !important; }
+            @page { margin: 0; }
         }
     </style>
 @endpush
@@ -36,7 +35,7 @@
 
     <div class="container receipt-container">
         <!-- Dynamic QRIS Payment Card (Shown if QRIS and still Unpaid) -->
-        @if ($sale->payment_method === 'qris' && $sale->payment_status === 'unpaid' && $qrisData)
+        @if ($sale->payment_method === 'qris' && $sale->payment_status === 'unpaid' && ! $sale->isCanceled() && $qrisData)
             <div class="qris-pay-card no-print" id="qrisPaymentBox">
                 <div class="qris-header">
                     <div class="qris-brand-logo">
@@ -95,6 +94,18 @@
             </div>
         @endif
 
+        @if ($sale->isCanceled())
+            <div class="no-print" role="alert" style="background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; padding:12px 14px; border-radius:12px; margin-bottom:14px; font-size:0.85rem;">
+                <strong>❌ Pesanan ini telah dibatalkan</strong>
+                @if ($sale->canceled_at)
+                    <span style="color:#7f1d1d;">({{ $sale->canceled_at->format('d/m/Y H:i') }})</span>
+                @endif
+                @if ($sale->cancel_reason)
+                    <div style="margin-top:4px;">Alasan: {{ $sale->cancel_reason }}</div>
+                @endif
+            </div>
+        @endif
+
         <!-- Digital Thermal Receipt Box -->
         <div class="receipt-box" id="thermalReceipt">
             <!-- Header Struk -->
@@ -123,6 +134,12 @@
                     <span style="color:#64748b;">Layanan:</span>
                     <strong>{{ $sale->service_type === 'dine_in' ? 'Makan di Tempat' : 'Bungkus (Takeaway)' }}</strong>
                 </div>
+                @if ($sale->table_number)
+                    <div style="display:flex; justify-content:space-between;">
+                        <span style="color:#64748b;">No. Meja:</span>
+                        <strong>{{ $sale->table_number }}</strong>
+                    </div>
+                @endif
                 <div style="display:flex; justify-content:space-between;">
                     <span style="color:#64748b;">Metode Bayar:</span>
                     <strong style="text-transform:uppercase;">{{ $sale->payment_method }}</strong>
@@ -130,9 +147,15 @@
                 <div style="display:flex; justify-content:space-between;">
                     <span style="color:#64748b;">Status Bayar:</span>
                     <strong id="receiptPaymentStatus" style="color:{{ $sale->isPaid() ? '#059669' : '#dc2626' }};">
-                        {{ $sale->isPaid() ? '✅ LUNAS' : '⏳ MENUNGGU PEMBAYARAN' }}
+                        {{ $sale->isPaid() ? '✅ LUNAS' : ($sale->isCanceled() ? '—' : '⏳ MENUNGGU PEMBAYARAN') }}
                     </strong>
                 </div>
+                @if ($sale->isCanceled())
+                    <div style="display:flex; justify-content:space-between;">
+                        <span style="color:#64748b;">Status Pesanan:</span>
+                        <strong style="color:#dc2626;">❌ DIBATALKAN</strong>
+                    </div>
+                @endif
                 @if ($sale->notes)
                     <div style="display:flex; justify-content:space-between; margin-top:4px;">
                         <span style="color:#64748b;">Catatan:</span>
@@ -169,11 +192,37 @@
 
             <div class="receipt-divider"></div>
 
+            @if ((float) $sale->discount_amount > 0)
+                <div style="font-size:0.85rem; line-height:1.7; margin-bottom:4px;">
+                    <div style="display:flex; justify-content:space-between;">
+                        <span style="color:#64748b;">Subtotal:</span>
+                        <span>{{ rupiah($sale->subtotal_amount) }}</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; color:#047857; font-weight:700;">
+                        <span>{{ $sale->discount_note ?: 'Diskon' }}:</span>
+                        <span>-{{ rupiah($sale->discount_amount) }}</span>
+                    </div>
+                </div>
+            @endif
+
             <!-- Total Amount -->
             <div style="display:flex; justify-content:space-between; align-items:center; font-size:1.15rem; font-weight:800;">
                 <span>TOTAL AKHIR:</span>
                 <span style="color:var(--primary);">{{ rupiah($sale->total_amount) }}</span>
             </div>
+
+            @if ($sale->payment_method === 'cash' && $sale->cash_received !== null)
+                <div style="font-size:0.85rem; line-height:1.7; margin-top:6px;">
+                    <div style="display:flex; justify-content:space-between;">
+                        <span style="color:#64748b;">Tunai Diterima:</span>
+                        <span>{{ rupiah($sale->cash_received) }}</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-weight:700;">
+                        <span>Kembalian:</span>
+                        <span>{{ rupiah($sale->cash_change) }}</span>
+                    </div>
+                </div>
+            @endif
 
             <div class="receipt-divider"></div>
 
@@ -186,13 +235,77 @@
 
             <!-- Tombol Aksi Mobile Friendly -->
             <div class="receipt-actions no-print">
-                <button onclick="window.print()" class="btn btn-primary" style="width:100%;">
-                    🖨️ Cetak Struk
-                </button>
+                <div class="print-controls">
+                    <select id="paperSize" class="form-control" aria-label="Ukuran kertas struk" onchange="applyPaperSize(this.value)">
+                        <option value="58">Kertas 58mm</option>
+                        <option value="80">Kertas 80mm</option>
+                    </select>
+                    <button type="button" onclick="printThermalReceipt()" class="btn btn-primary">
+                        🖨️ Cetak Struk
+                    </button>
+                </div>
                 <a href="https://api.whatsapp.com/send?phone={{ preg_replace('/^0/', '62', $sale->customer_phone) }}&text={{ urlencode('Halo ' . $sale->customer_name . ', berikut adalah struk digital pesanan Anda (' . $sale->invoice_number . '): ' . $receiptUrl) }}" target="_blank" class="btn btn-success" style="width:100%;">
                     📲 Kirim Struk ke WhatsApp
                 </a>
             </div>
+        </div>
+
+        <!-- Struk Thermal: hanya tampil saat dicetak -->
+        <div class="thermal-print" aria-hidden="true">
+            <div class="tp-center tp-title">{{ config('app.name') }}</div>
+            <div class="tp-center">{{ config('app.address') }}</div>
+            @if ($sale->isCanceled())
+                <div class="tp-line"></div>
+                <div class="tp-center tp-title">*** DIBATALKAN ***</div>
+                @if ($sale->cancel_reason)
+                    <div class="tp-center">{{ $sale->cancel_reason }}</div>
+                @endif
+            @endif
+            <div class="tp-line"></div>
+
+            <div class="tp-row"><span>No</span><span>{{ $sale->invoice_number }}</span></div>
+            <div class="tp-row"><span>Tanggal</span><span>{{ $sale->created_at->format('d/m/Y H:i') }}</span></div>
+            <div class="tp-row"><span>Pelanggan</span><span>{{ $sale->customer_name }}</span></div>
+            <div class="tp-row">
+                <span>Layanan</span>
+                <span>{{ $sale->service_type === 'dine_in' ? 'Dine In' : 'Takeaway' }}@if ($sale->table_number) · Meja {{ $sale->table_number }}@endif</span>
+            </div>
+            <div class="tp-line"></div>
+
+            @foreach ($items as $item)
+                <div class="tp-item">
+                    <div>{{ $item['product_name'] }}</div>
+                    <div class="tp-row">
+                        <span>{{ $item['quantity'] }} x {{ rupiah($item['unit_price'], false) }}</span>
+                        <span>{{ rupiah($item['subtotal'], false) }}</span>
+                    </div>
+                    @if (!empty($item['notes']))
+                        <div class="tp-note">* {{ $item['notes'] }}</div>
+                    @endif
+                </div>
+            @endforeach
+            <div class="tp-line"></div>
+
+            @if ((float) $sale->discount_amount > 0)
+                <div class="tp-row"><span>Subtotal</span><span>{{ rupiah($sale->subtotal_amount, false) }}</span></div>
+                <div class="tp-row"><span>{{ $sale->promo_code ? 'Kupon '.$sale->promo_code : 'Diskon' }}</span><span>-{{ rupiah($sale->discount_amount, false) }}</span></div>
+            @endif
+            <div class="tp-row tp-total"><span>TOTAL</span><span>{{ rupiah($sale->total_amount) }}</span></div>
+            @if ($sale->payment_method === 'cash' && $sale->cash_received !== null)
+                <div class="tp-row"><span>Tunai</span><span>{{ rupiah($sale->cash_received) }}</span></div>
+                <div class="tp-row tp-bold"><span>Kembalian</span><span>{{ rupiah($sale->cash_change) }}</span></div>
+            @endif
+            <div class="tp-row">
+                <span>Bayar</span>
+                <span>{{ strtoupper($sale->payment_method) }} · <span id="tpPaymentStatus">{{ $sale->isPaid() ? 'LUNAS' : 'BELUM LUNAS' }}</span></span>
+            </div>
+            @if ($sale->notes)
+                <div class="tp-note">Catatan: {{ $sale->notes }}</div>
+            @endif
+            <div class="tp-line"></div>
+
+            <div class="tp-center tp-bold">Terima kasih &amp; selamat menikmati!</div>
+            <div class="tp-center">Simpan struk ini sebagai bukti pembayaran</div>
         </div>
     </div>
 @endsection
@@ -203,11 +316,44 @@
         const statusUrl = @js(route('orders.status', $sale->invoice_number));
         let currentPaymentStatus = @js($sale->payment_status);
 
-        if (currentPaymentStatus === 'unpaid') {
+        // ===== Cetak struk thermal 58mm / 80mm =====
+        function applyPaperSize(size) {
+            const paper = size === '80' ? '80' : '58';
+            document.documentElement.dataset.paper = paper;
+            const select = document.getElementById('paperSize');
+            if (select) select.value = paper;
+            try { localStorage.setItem('receiptPaperSize', paper); } catch (e) {}
+        }
+
+        function printThermalReceipt() {
+            applyPaperSize(document.getElementById('paperSize')?.value);
+            window.print();
+        }
+
+        (function initThermalPrint() {
+            let saved = '58';
+            try { saved = localStorage.getItem('receiptPaperSize') || '58'; } catch (e) {}
+
+            // ?print=1 dari dashboard kasir langsung membuka dialog cetak (?print=80 untuk paksa 80mm).
+            const printParam = new URLSearchParams(window.location.search).get('print');
+            applyPaperSize(printParam === '58' || printParam === '80' ? printParam : saved);
+
+            if (printParam) {
+                window.addEventListener('load', () => setTimeout(() => window.print(), 300));
+            }
+        })();
+
+        if (currentPaymentStatus === 'unpaid' && !@js($sale->isCanceled())) {
             const pollTimer = setInterval(async () => {
                 try {
                     const res = await fetch(statusUrl);
                     const data = await res.json();
+                    // Kasir membatalkan pesanan saat pelanggan masih di halaman ini.
+                    if (data.success && data.data.order_status === 'canceled') {
+                        clearInterval(pollTimer);
+                        window.location.reload();
+                        return;
+                    }
                     if (data.success && data.data.payment_status === 'paid') {
                         currentPaymentStatus = 'paid';
                         clearInterval(pollTimer);
@@ -227,6 +373,8 @@
                             statusEl.innerText = '✅ LUNAS';
                             statusEl.style.color = '#059669';
                         }
+                        const printStatusEl = document.getElementById('tpPaymentStatus');
+                        if (printStatusEl) printStatusEl.innerText = 'LUNAS';
                     }
                 } catch (error) {
                     console.error('Gagal memeriksa status pembayaran:', error);

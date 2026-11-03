@@ -40,6 +40,13 @@ function initOwnerPolling(ownerTypes, workingLabel) {
 
   loadDashboardData();
 
+  // Tutup modal kalkulator kembalian dengan tombol Esc
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && cashModalState) closeCashModal();
+    if (e.key === 'Escape' && voidModalState) closeVoidModal();
+    if (e.key === 'Escape' && discountModalState) closeDiscountModal();
+  });
+
   // Polling setiap 5 detik
   pollingInterval = setInterval(() => {
     checkNewOrdersPolling(ownerTypes);
@@ -126,20 +133,54 @@ function filterOrderStatus(status) {
   renderOrderCards(currentOrdersCache);
 }
 
+// ===== Pencarian antrean (no. meja, invoice, nama, HP, menu) =====
+let orderSearchQuery = '';
+
+function searchOrders(value) {
+  orderSearchQuery = String(value || '').trim().toLowerCase();
+  renderOrderCards(currentOrdersCache);
+}
+
+function matchesOrderSearch(order) {
+  if (!orderSearchQuery) return true;
+
+  const haystack = [
+    order.table_number ? `meja ${order.table_number}` : '',
+    order.invoice_number,
+    order.customer_name,
+    order.customer_phone,
+    order.product_name,
+  ].join(' ').toLowerCase();
+
+  // Semua kata harus cocok, contoh: "budi kopi"
+  return orderSearchQuery.split(/\s+/).every(word => haystack.includes(word));
+}
+
 function renderOrderCards(orders) {
   const container = document.getElementById('ordersContainer');
   if (!container) return;
 
-  const filtered = (activeOrderFilter === 'all') 
-    ? orders 
-    : orders.filter(o => o.item_status === activeOrderFilter);
+  const byStatus = (activeOrderFilter === 'all')
+    ? (orders || [])
+    : (orders || []).filter(o => o.item_status === activeOrderFilter);
+  const filtered = byStatus.filter(matchesOrderSearch);
 
-  if (!filtered || filtered.length === 0) {
+  const countEl = document.getElementById('orderSearchCount');
+  if (countEl) countEl.textContent = orderSearchQuery ? `${filtered.length} hasil` : '';
+
+  if (filtered.length === 0) {
+    const title = orderSearchQuery
+      ? `Tidak ada pesanan yang cocok dengan "${escapeHtml(orderSearchQuery)}"`
+      : `Tidak ada antrean pesanan ${activeOrderFilter !== 'all' ? '(' + activeOrderFilter + ')' : 'aktif'}`;
+    const hint = orderSearchQuery
+      ? 'Coba kata kunci lain, atau hapus pencarian untuk melihat semua antrean.'
+      : 'Pesanan pelanggan yang masuk akan otomatis muncul di sini.';
+
     container.innerHTML = `
       <div style="text-align:center; padding:40px 20px; background:#fff; border-radius:16px; border:1px dashed #cbd5e1; grid-column:1/-1;">
-        <div style="font-size:2.5rem; margin-bottom:8px;">🍽️</div>
-        <h3 style="color:#64748b; font-size:1.1rem; font-weight:700;">Tidak ada antrean pesanan ${activeOrderFilter !== 'all' ? '(' + activeOrderFilter + ')' : 'aktif'}</h3>
-        <p style="color:#94a3b8; font-size:0.85rem; margin-top:2px;">Pesanan pelanggan yang masuk akan otomatis muncul di sini.</p>
+        <div style="font-size:2.5rem; margin-bottom:8px;">${orderSearchQuery ? '🔍' : '🍽️'}</div>
+        <h3 style="color:#64748b; font-size:1.1rem; font-weight:700;">${title}</h3>
+        <p style="color:#94a3b8; font-size:0.85rem; margin-top:2px;">${hint}</p>
       </div>
     `;
     return;
@@ -164,9 +205,10 @@ function renderOrderCards(orders) {
           <div>
             <div style="font-weight:800; font-size:1.1rem; color:#1e293b;">
               ${isDineIn ? '🍽️ Makan di Tempat' : '🛍️ Takeaway / Bungkus'}
+              ${order.table_number ? `<span class="brand-badge" style="margin-left:4px;">Meja ${escapeHtml(order.table_number)}</span>` : ''}
             </div>
             <div style="font-size:0.78rem; color:#64748b; margin-top:2px;">
-              Inv: <strong>${order.invoice_number}</strong> &bull; ${order.customer_name}
+              Inv: <strong>${escapeHtml(order.invoice_number)}</strong> &bull; ${escapeHtml(order.customer_name)}
             </div>
           </div>
           <div>${statusBadge}</div>
@@ -185,10 +227,20 @@ function renderOrderCards(orders) {
           </div>
         </div>
 
+        ${Number(order.discount_amount) > 0 ? `<div class="order-discount-note">🏷️ ${escapeHtml(order.discount_note || 'Diskon')}: -${formatRupiah(order.discount_amount)} &bull; Tagihan ${formatRupiah(order.total_amount)}</div>` : ''}
+
         ${order.notes ? `<div style="font-size:0.8rem; background:#fffbeb; padding:6px 10px; border-radius:8px; margin-bottom:12px; color:#b45309;">📝 Catatan Pesanan: ${escapeHtml(order.notes)}</div>` : ''}
 
         <div style="display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;">
+          <a class="btn btn-outline btn-sm" href="/receipt/${encodeURIComponent(order.invoice_number)}?print=1"
+             target="_blank" rel="noopener" title="Cetak struk thermal">🖨️ Struk</a>
+          <button class="btn btn-outline-danger btn-sm" onclick="openVoidModal(${order.sale_id})" title="Batalkan seluruh pesanan">
+            🚫 Batalkan
+          </button>
           ${order.payment_status === 'unpaid' ? `
+            <button class="btn btn-outline btn-sm" onclick="openDiscountModal(${order.sale_id})" title="Potongan harga / kupon">
+              🏷️ Diskon
+            </button>
             <button class="btn btn-warning btn-sm" onclick="confirmPayment(${order.sale_id})">
               💵 Terima Bayar Kasir
             </button>
@@ -230,24 +282,347 @@ async function updateStatus(itemId, newStatus) {
   }
 }
 
-async function confirmPayment(saleId) {
+// ===== Kalkulator Uang Kembalian (pembayaran tunai) =====
+let cashModalState = null; // { saleId, total }
+
+function confirmPayment(saleId) {
+  const order = currentOrdersCache.find(o => o.sale_id === saleId);
+
+  // Pesanan tunai: buka kalkulator kembalian. Selain itu cukup konfirmasi biasa.
+  if (order && order.payment_method === 'cash' && document.getElementById('cashModal')) {
+    openCashModal(order);
+    return;
+  }
+
   if (!confirm('Konfirmasi pelanggan sudah membayar tunai / QRIS di kasir?')) return;
+  markSalePaid(saleId);
+}
+
+function openCashModal(order) {
+  const total = Math.round(Number(order.total_amount) || 0);
+  cashModalState = { saleId: order.sale_id, total };
+
+  document.getElementById('cashModalInvoice').textContent =
+    `Inv: ${order.invoice_number} • ${order.customer_name}`;
+  document.getElementById('cashTotal').textContent = formatRupiah(total);
+
+  const input = document.getElementById('cashReceived');
+  input.value = '';
+
+  renderCashQuickButtons(total);
+  updateCashChange();
+
+  document.getElementById('cashModal').classList.add('active');
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => input.focus(), 50);
+}
+
+function closeCashModal() {
+  document.getElementById('cashModal').classList.remove('active');
+  document.body.style.overflow = '';
+  cashModalState = null;
+}
+
+// Saran nominal cepat: uang pas + pembulatan ke pecahan uang kertas umum.
+function renderCashQuickButtons(total) {
+  const amounts = [total];
+  [5000, 10000, 20000, 50000, 100000].forEach(step => {
+    const rounded = Math.ceil(total / step) * step;
+    if (rounded > total && !amounts.includes(rounded)) amounts.push(rounded);
+  });
+
+  document.getElementById('cashQuickButtons').innerHTML = amounts.slice(0, 5).map((amount, i) => `
+    <button type="button" class="btn btn-outline btn-sm" onclick="setCashReceived(${amount})">
+      ${i === 0 ? 'Uang Pas' : formatRupiah(amount)}
+    </button>
+  `).join('');
+}
+
+function parseCashValue(text) {
+  return Number(String(text).replace(/\D/g, '')) || 0;
+}
+
+function onCashInput(input) {
+  const value = parseCashValue(input.value);
+  input.value = value ? value.toLocaleString('id-ID') : '';
+  updateCashChange();
+}
+
+function setCashReceived(amount) {
+  document.getElementById('cashReceived').value = amount.toLocaleString('id-ID');
+  updateCashChange();
+}
+
+function updateCashChange() {
+  if (!cashModalState) return;
+
+  const received = parseCashValue(document.getElementById('cashReceived').value);
+  const diff = received - cashModalState.total;
+  const box = document.getElementById('cashChangeBox');
+  const enough = received > 0 && diff >= 0;
+
+  document.getElementById('cashChangeLabel').textContent = diff < 0 && received > 0 ? 'Uang Kurang' : 'Kembalian';
+  document.getElementById('cashChange').textContent = formatRupiah(received > 0 ? Math.abs(diff) : 0);
+  box.classList.toggle('is-short', received > 0 && diff < 0);
+  box.classList.toggle('is-ok', enough);
+  document.getElementById('btnCashSubmit').disabled = !enough;
+}
+
+async function submitCashPayment(e) {
+  e.preventDefault();
+  if (!cashModalState) return;
+
+  const received = parseCashValue(document.getElementById('cashReceived').value);
+  const change = received - cashModalState.total;
+  if (change < 0) return;
+
+  const btn = document.getElementById('btnCashSubmit');
+  btn.disabled = true;
+
+  const ok = await markSalePaid(cashModalState.saleId,
+    `Lunas • Kembalian ${formatRupiah(change)}`, received);
+
+  if (ok) {
+    closeCashModal();
+  } else {
+    btn.disabled = false;
+  }
+}
+
+async function markSalePaid(saleId, successMessage, cashReceived = null) {
+  const payload = { sale_id: saleId, payment_status: 'paid' };
+  if (cashReceived !== null) payload.cash_received = cashReceived;
+
   try {
     const res = await fetch('/api/owner/payment/status', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sale_id: saleId, payment_status: 'paid' })
+      body: JSON.stringify(payload)
     });
     const result = await res.json();
     if (result.success) {
-      showToast('Status pembayaran berhasil diubah ke LUNAS');
+      showToast(successMessage || 'Status pembayaran berhasil diubah ke LUNAS');
       loadDashboardData();
-    } else {
-      alert('Error: ' + result.message);
+      return true;
     }
+    alert('Error: ' + result.message);
   } catch (e) {
     alert('Error: ' + e.message);
   }
+  return false;
+}
+
+// ===== Potongan Harga / Diskon =====
+let discountModalState = null; // { saleId, subtotal, mode }
+
+function openDiscountModal(saleId) {
+  const order = currentOrdersCache.find(o => o.sale_id === saleId);
+  if (!order) return;
+
+  const subtotal = Math.round(Number(order.subtotal_amount ?? order.total_amount) || 0);
+  const current = Math.round(Number(order.discount_amount) || 0);
+  discountModalState = { saleId, subtotal, mode: 'manual' };
+
+  document.getElementById('discountModalInvoice').textContent =
+    `Inv: ${order.invoice_number} • ${order.customer_name}`;
+  document.getElementById('discountSubtotal').textContent = formatRupiah(subtotal);
+
+  const currentBox = document.getElementById('discountCurrent');
+  currentBox.style.display = current > 0 ? '' : 'none';
+  currentBox.textContent = current > 0
+    ? `Diskon saat ini: ${order.discount_note || 'Diskon'} (-${formatRupiah(current)}). Diskon baru akan menggantikannya.`
+    : '';
+  document.getElementById('btnDiscountRemove').style.display = current > 0 ? '' : 'none';
+
+  document.getElementById('discountAmount').value = '';
+  document.getElementById('discountNote').value = '';
+  document.getElementById('discountCode').value = '';
+  renderDiscountQuickButtons(subtotal);
+  setDiscountMode(order.promo_code ? 'promo' : 'manual');
+
+  document.getElementById('discountModal').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeDiscountModal() {
+  document.getElementById('discountModal').classList.remove('active');
+  document.body.style.overflow = '';
+  discountModalState = null;
+}
+
+function setDiscountMode(mode) {
+  if (!discountModalState) return;
+  discountModalState.mode = mode;
+  document.getElementById('btnDiscountManual').classList.toggle('active', mode === 'manual');
+  document.getElementById('btnDiscountPromo').classList.toggle('active', mode === 'promo');
+  document.getElementById('discountManualFields').style.display = mode === 'manual' ? '' : 'none';
+  document.getElementById('discountPromoFields').style.display = mode === 'promo' ? '' : 'none';
+  document.getElementById('discountPreviewBox').style.display = mode === 'manual' ? '' : 'none';
+  updateDiscountPreview();
+  setTimeout(() => document.getElementById(mode === 'manual' ? 'discountAmount' : 'discountCode').focus(), 50);
+}
+
+// Saran cepat: 5%, 10%, 20% dari total, dibulatkan ke bawah ke ribuan.
+function renderDiscountQuickButtons(subtotal) {
+  const amounts = [5, 10, 20]
+    .map(pct => ({ pct, amount: Math.floor(subtotal * pct / 100 / 1000) * 1000 }))
+    .filter(x => x.amount > 0);
+
+  document.getElementById('discountQuickButtons').innerHTML = amounts.map(x => `
+    <button type="button" class="btn btn-outline btn-sm" onclick="setDiscountAmount(${x.amount})">
+      ${x.pct}% • ${formatRupiah(x.amount)}
+    </button>
+  `).join('');
+}
+
+function onDiscountInput(input) {
+  const value = parseCashValue(input.value);
+  input.value = value ? value.toLocaleString('id-ID') : '';
+  updateDiscountPreview();
+}
+
+function setDiscountAmount(amount) {
+  document.getElementById('discountAmount').value = amount.toLocaleString('id-ID');
+  updateDiscountPreview();
+}
+
+function updateDiscountPreview() {
+  if (!discountModalState) return;
+  const { subtotal, mode } = discountModalState;
+  const btn = document.getElementById('btnDiscountSubmit');
+
+  if (mode === 'promo') {
+    btn.disabled = document.getElementById('discountCode').value.trim() === '';
+    return;
+  }
+
+  const amount = parseCashValue(document.getElementById('discountAmount').value);
+  const valid = amount > 0 && amount <= subtotal;
+  const box = document.getElementById('discountPreviewBox');
+  document.getElementById('discountPreview').textContent =
+    amount > subtotal ? 'Melebihi total' : formatRupiah(subtotal - amount);
+  box.classList.toggle('is-ok', valid);
+  box.classList.toggle('is-short', amount > subtotal);
+  btn.disabled = !valid;
+}
+
+async function sendDiscount(payload) {
+  try {
+    const res = await fetch('/api/owner/order/discount', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const result = await res.json();
+    if (result.success) {
+      closeDiscountModal();
+      showToast(escapeHtml(result.message));
+      loadDashboardData();
+      return true;
+    }
+    const firstError = result.errors ? Object.values(result.errors).flat()[0] : null;
+    alert(firstError || result.message);
+  } catch (err) {
+    alert('Gagal menyimpan diskon: ' + err.message);
+  }
+  return false;
+}
+
+async function submitDiscount(e) {
+  e.preventDefault();
+  if (!discountModalState) return;
+
+  const { saleId, mode } = discountModalState;
+  const payload = mode === 'promo'
+    ? { sale_id: saleId, mode, code: document.getElementById('discountCode').value.trim().toUpperCase() }
+    : {
+        sale_id: saleId,
+        mode,
+        amount: parseCashValue(document.getElementById('discountAmount').value),
+        note: document.getElementById('discountNote').value.trim()
+      };
+
+  const btn = document.getElementById('btnDiscountSubmit');
+  btn.disabled = true;
+  if (!(await sendDiscount(payload))) btn.disabled = false;
+}
+
+async function removeDiscount() {
+  if (!discountModalState) return;
+  if (!confirm('Hapus diskon dari tagihan ini?')) return;
+  await sendDiscount({ sale_id: discountModalState.saleId, mode: 'remove' });
+}
+
+// ===== Batal Pesanan (Void Order) =====
+let voidModalState = null; // { saleId }
+
+function openVoidModal(saleId) {
+  const lines = currentOrdersCache.filter(o => o.sale_id === saleId);
+  if (lines.length === 0) return;
+  const order = lines[0];
+  voidModalState = { saleId };
+
+  document.getElementById('voidModalInvoice').textContent =
+    `Inv: ${order.invoice_number} • ${order.customer_name}${order.table_number ? ' • Meja ' + order.table_number : ''}`;
+  document.getElementById('voidItemList').innerHTML = lines.map(l => `
+    <li><span>${escapeHtml(l.product_name)} &times; ${l.quantity}</span><span>${formatRupiah(l.subtotal)}</span></li>
+  `).join('');
+  document.getElementById('voidTotal').textContent = formatRupiah(order.total_amount);
+  document.getElementById('voidPaidWarning').style.display = order.payment_status === 'paid' ? '' : 'none';
+
+  const reason = document.getElementById('voidReason');
+  reason.value = '';
+  updateVoidSubmit();
+
+  document.getElementById('voidModal').classList.add('active');
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => reason.focus(), 50);
+}
+
+function closeVoidModal() {
+  document.getElementById('voidModal').classList.remove('active');
+  document.body.style.overflow = '';
+  voidModalState = null;
+}
+
+function setVoidReason(text) {
+  document.getElementById('voidReason').value = text.trim();
+  updateVoidSubmit();
+}
+
+function updateVoidSubmit() {
+  const reason = document.getElementById('voidReason').value.trim();
+  document.getElementById('btnVoidSubmit').disabled = reason.length < 3;
+}
+
+async function submitVoidOrder(e) {
+  e.preventDefault();
+  if (!voidModalState) return;
+
+  const reason = document.getElementById('voidReason').value.trim();
+  if (reason.length < 3) return;
+
+  const btn = document.getElementById('btnVoidSubmit');
+  btn.disabled = true;
+
+  try {
+    const res = await fetch('/api/owner/order/cancel', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ sale_id: voidModalState.saleId, reason })
+    });
+    const result = await res.json();
+    if (result.success) {
+      closeVoidModal();
+      showToast(escapeHtml(result.message));
+      loadDashboardData();
+      return;
+    }
+    alert('Gagal membatalkan: ' + result.message);
+  } catch (err) {
+    alert('Gagal membatalkan: ' + err.message);
+  }
+  btn.disabled = false;
 }
 
 function formatRupiah(num) {

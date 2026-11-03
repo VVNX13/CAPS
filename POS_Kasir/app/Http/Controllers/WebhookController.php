@@ -130,6 +130,7 @@ class WebhookController extends Controller
 
         if ($amount !== null && $amount > 0) {
             $sale = Sale::where('payment_status', 'unpaid')
+                ->where('order_status', '!=', 'canceled')
                 ->where('total_amount', $amount)
                 ->orderByDesc('id')
                 ->first();
@@ -143,6 +144,7 @@ class WebhookController extends Controller
 
             if ($parsedAmount > 0) {
                 return Sale::where('payment_status', 'unpaid')
+                    ->where('order_status', '!=', 'canceled')
                     ->where('total_amount', $parsedAmount)
                     ->orderByDesc('id')
                     ->first();

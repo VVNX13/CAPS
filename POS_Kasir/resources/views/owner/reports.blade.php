@@ -52,6 +52,7 @@
             <div class="kpi-card border-success" style="grid-column: span 2;">
                 <div class="kpi-label">TOTAL OMSET {{ strtoupper($scopeLabel) }} (LUNAS)</div>
                 <div id="reportTotalRevenue" class="kpi-val text-success" style="font-size:1.45rem;">Rp 0</div>
+                <div id="reportDiscountNote" style="font-size:0.75rem; color:#64748b; margin-top:2px;"></div>
             </div>
         </div>
 
@@ -113,6 +114,9 @@
                     document.getElementById('reportOrdersCount').innerText = data.data.total_orders;
                     document.getElementById('reportItemsSold').innerText = data.data.total_items_sold + ' porsi';
                     document.getElementById('reportTotalRevenue').innerText = formatRupiah(data.data.total_revenue);
+                    document.getElementById('reportDiscountNote').innerText = data.data.total_discount > 0
+                        ? `Sudah dipotong diskon ${formatRupiah(data.data.total_discount)} (kotor ${formatRupiah(data.data.gross_revenue)})`
+                        : '';
                     renderReportTable(data.data.items);
                 }
             } catch (e) {
@@ -144,7 +148,10 @@
                         ${categoryCell}
                         <td style="text-align:center; font-weight:700;">${item.quantity}</td>
                         <td style="text-align:right;">${formatRupiah(item.unit_price)}</td>
-                        <td style="text-align:right; font-weight:800; color:#0f172a;">${formatRupiah(item.subtotal)}</td>
+                        <td style="text-align:right; font-weight:800; color:#0f172a;">
+                            ${formatRupiah(item.net_subtotal)}
+                            ${item.discount > 0 ? `<div style="font-size:0.7rem; font-weight:600; color:#047857;">diskon -${formatRupiah(item.discount)}</div>` : ''}
+                        </td>
                     </tr>
                 `;
             });

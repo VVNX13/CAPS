@@ -81,9 +81,181 @@
             </div>
         </div>
 
+        <!-- Pencarian Antrean -->
+        <div class="order-search">
+            <span class="order-search-icon" aria-hidden="true">🔍</span>
+            <input type="search" id="orderSearch" class="form-control" autocomplete="off"
+                   placeholder="Cari no. meja, invoice, nama pembeli, atau menu…"
+                   aria-label="Cari pesanan" oninput="searchOrders(this.value)">
+            <span id="orderSearchCount" class="order-search-count"></span>
+        </div>
+
         <!-- Order Cards Stream -->
         <div id="ordersContainer" class="orders-grid"></div>
     </main>
+
+    <!-- Modal Terima Bayar Tunai + Kalkulator Kembalian -->
+    <div class="modal-overlay" id="cashModal" onclick="if (event.target === this) closeCashModal()">
+        <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="cashModalTitle">
+            <div class="modal-sheet-handle"></div>
+
+            <div class="modal-header">
+                <div>
+                    <h3 id="cashModalTitle" style="font-size:1.15rem; font-weight:800; color:#0f172a;">💵 Terima Bayar Tunai</h3>
+                    <p id="cashModalInvoice" style="font-size:0.75rem; color:#64748b; margin-top:2px;"></p>
+                </div>
+                <button type="button" class="btn btn-outline modal-close-btn" onclick="closeCashModal()" aria-label="Tutup">&times;</button>
+            </div>
+
+            <form onsubmit="submitCashPayment(event)">
+                <div class="modal-body">
+                    <div class="cash-total-row">
+                        <span>Total Tagihan</span>
+                        <strong id="cashTotal">Rp 0</strong>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="cashReceived">Uang Diterima</label>
+                        <div class="cash-input-wrap">
+                            <span>Rp</span>
+                            <input type="text" id="cashReceived" class="form-control" inputmode="numeric"
+                                   autocomplete="off" placeholder="0" oninput="onCashInput(this)">
+                        </div>
+                    </div>
+
+                    <div id="cashQuickButtons" class="cash-quick-buttons"></div>
+
+                    <div id="cashChangeBox" class="cash-change-box">
+                        <span id="cashChangeLabel">Kembalian</span>
+                        <strong id="cashChange">Rp 0</strong>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" onclick="closeCashModal()">Batal</button>
+                    <button type="submit" id="btnCashSubmit" class="btn btn-success" disabled>✅ Konfirmasi Lunas</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Potongan Harga / Diskon -->
+    <div class="modal-overlay" id="discountModal" onclick="if (event.target === this) closeDiscountModal()">
+        <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="discountModalTitle">
+            <div class="modal-sheet-handle"></div>
+
+            <div class="modal-header">
+                <div>
+                    <h3 id="discountModalTitle" style="font-size:1.15rem; font-weight:800; color:#0f172a;">🏷️ Potongan Harga</h3>
+                    <p id="discountModalInvoice" style="font-size:0.75rem; color:#64748b; margin-top:2px;"></p>
+                </div>
+                <button type="button" class="btn btn-outline modal-close-btn" onclick="closeDiscountModal()" aria-label="Tutup">&times;</button>
+            </div>
+
+            <form onsubmit="submitDiscount(event)">
+                <div class="modal-body">
+                    <div class="cash-total-row">
+                        <span>Total Belanja</span>
+                        <strong id="discountSubtotal">Rp 0</strong>
+                    </div>
+
+                    <div id="discountCurrent" class="discount-current" style="display:none;"></div>
+
+                    <div class="toggle-service" style="margin-bottom:14px;">
+                        <div class="toggle-btn active" id="btnDiscountManual" onclick="setDiscountMode('manual')">💵 Nominal Manual</div>
+                        <div class="toggle-btn" id="btnDiscountPromo" onclick="setDiscountMode('promo')">🏷️ Kupon Promo</div>
+                    </div>
+
+                    <div id="discountManualFields">
+                        <div class="form-group">
+                            <label class="form-label" for="discountAmount">Nominal Diskon</label>
+                            <div class="cash-input-wrap">
+                                <span>Rp</span>
+                                <input type="text" id="discountAmount" class="form-control" inputmode="numeric"
+                                       autocomplete="off" placeholder="0" oninput="onDiscountInput(this)">
+                            </div>
+                        </div>
+                        <div id="discountQuickButtons" class="cash-quick-buttons"></div>
+                        <div class="form-group">
+                            <label class="form-label" for="discountNote">Keterangan <span class="form-hint" style="display:inline;">(opsional)</span></label>
+                            <input type="text" id="discountNote" class="form-control" maxlength="255" placeholder="Contoh: pelanggan tetap, kompensasi pesanan telat">
+                        </div>
+                    </div>
+
+                    <div id="discountPromoFields" style="display:none;">
+                        <div class="form-group">
+                            <label class="form-label" for="discountCode">Kode Kupon</label>
+                            <input type="text" id="discountCode" class="form-control" maxlength="30" autocomplete="off"
+                                   placeholder="HEMAT10" style="text-transform:uppercase;" oninput="updateDiscountPreview()">
+                            <small class="form-hint">Potongan dari kupon dihitung otomatis oleh sistem.</small>
+                        </div>
+                    </div>
+
+                    <div id="discountPreviewBox" class="cash-change-box">
+                        <span>Total Setelah Diskon</span>
+                        <strong id="discountPreview">Rp 0</strong>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" id="btnDiscountRemove" class="btn btn-outline-danger" style="display:none;" onclick="removeDiscount()">Hapus Diskon</button>
+                    <button type="button" class="btn btn-outline" onclick="closeDiscountModal()">Batal</button>
+                    <button type="submit" id="btnDiscountSubmit" class="btn btn-primary" disabled>✅ Pasang Diskon</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Batal Pesanan (Void Order) -->
+    <div class="modal-overlay" id="voidModal" onclick="if (event.target === this) closeVoidModal()">
+        <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="voidModalTitle">
+            <div class="modal-sheet-handle"></div>
+
+            <div class="modal-header">
+                <div>
+                    <h3 id="voidModalTitle" style="font-size:1.15rem; font-weight:800; color:#b91c1c;">🚫 Batalkan Pesanan</h3>
+                    <p id="voidModalInvoice" style="font-size:0.75rem; color:#64748b; margin-top:2px;"></p>
+                </div>
+                <button type="button" class="btn btn-outline modal-close-btn" onclick="closeVoidModal()" aria-label="Tutup">&times;</button>
+            </div>
+
+            <form onsubmit="submitVoidOrder(event)">
+                <div class="modal-body">
+                    <div class="void-summary">
+                        <div style="font-weight:700; margin-bottom:6px; color:#334155;">Seluruh isi invoice akan dibatalkan:</div>
+                        <ul id="voidItemList" class="void-item-list"></ul>
+                        <div class="cash-total-row" style="margin-top:8px;">
+                            <span>Total Tagihan</span>
+                            <strong id="voidTotal">Rp 0</strong>
+                        </div>
+                    </div>
+
+                    <div id="voidPaidWarning" class="void-paid-warning" style="display:none;">
+                        ⚠️ Pesanan ini <strong>sudah lunas</strong>. Kembalikan uang pelanggan setelah pembatalan.
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="voidReason">Alasan Pembatalan</label>
+                        <div class="void-reason-chips">
+                            <button type="button" class="btn btn-outline btn-sm" onclick="setVoidReason(this.textContent)">Pelanggan membatalkan</button>
+                            <button type="button" class="btn btn-outline btn-sm" onclick="setVoidReason(this.textContent)">Menu habis</button>
+                            <button type="button" class="btn btn-outline btn-sm" onclick="setVoidReason(this.textContent)">Salah input pesanan</button>
+                            <button type="button" class="btn btn-outline btn-sm" onclick="setVoidReason(this.textContent)">Pesanan ganda</button>
+                        </div>
+                        <textarea id="voidReason" class="form-control" rows="2" maxlength="255"
+                                  placeholder="Tulis alasan pembatalan…" oninput="updateVoidSubmit()"></textarea>
+                    </div>
+
+                    <p style="font-size:0.78rem; color:#64748b;">Stok menu pada pesanan ini akan dikembalikan otomatis.</p>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" onclick="closeVoidModal()">Kembali</button>
+                    <button type="submit" id="btnVoidSubmit" class="btn btn-danger" disabled>🚫 Batalkan Pesanan</button>
+                </div>
+            </form>
+        </div>
+    </div>
 @endsection
 
 @push('scripts')

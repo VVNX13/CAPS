@@ -55,6 +55,7 @@ class QrisPaymentSyncService
         $pending = Sale::query()
             ->where('payment_method', 'qris')
             ->where('payment_status', 'unpaid')
+            ->where('order_status', '!=', 'canceled')
             ->whereNotNull('qris_transaction_id')
             ->where('created_at', '>=', now()->subMinutes($window))
             ->orderBy('id')

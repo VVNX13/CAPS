@@ -40,6 +40,27 @@ class CheckoutTest extends TestCase
         $this->assertSame(8, $product->fresh()->stock);
     }
 
+    public function test_checkout_accepts_separate_personalizations_for_same_product(): void
+    {
+        $product = Product::factory()->create(['price' => 25000, 'stock' => 5]);
+
+        $this->postJson('/api/orders/checkout', [
+            'customer_name' => 'Budi',
+            'customer_phone' => '08123456789',
+            'service_type' => 'takeaway',
+            'payment_method' => 'cash',
+            'items' => [
+                ['product_id' => $product->id, 'quantity' => 1, 'notes' => 'Less sugar'],
+                ['product_id' => $product->id, 'quantity' => 2, 'notes' => 'Normal sugar'],
+            ],
+        ])->assertCreated()->assertJsonPath('success', true);
+
+        $this->assertSame(2, SaleItem::count());
+        $this->assertSame(2, $product->fresh()->stock);
+        $this->assertDatabaseHas('sale_items', ['product_id' => $product->id, 'quantity' => 1, 'notes' => 'Less sugar']);
+        $this->assertDatabaseHas('sale_items', ['product_id' => $product->id, 'quantity' => 2, 'notes' => 'Normal sugar']);
+    }
+
     public function test_checkout_rejects_an_empty_cart(): void
     {
         $this->postJson('/api/orders/checkout', [
