@@ -29,6 +29,7 @@ class ReportController extends Controller
         ]);
     }
 
+
     /**
      * Report rows as JSON for the owner reports table.
      */
@@ -39,7 +40,8 @@ class ReportController extends Controller
 
         $rows = $this->queryReportData($user->ownerTypes(), $startDate, $endDate);
 
-        return ApiResponse::success([
+        // Existing response
+        $response = [
             'start_date' => $startDate,
             'end_date' => $endDate,
             'owner_type' => $user->ownerTypes(),
@@ -50,8 +52,67 @@ class ReportController extends Controller
             'total_items_sold' => (int) $rows->sum('quantity'),
             'total_orders' => $rows->pluck('invoice_number')->unique()->count(),
             'items' => $rows,
+        ];
+        return ApiResponse::success($response);
+    }
+
+
+    /**
+     * Pareto analysis – top 80% revenue products and low‑selling items.
+     */
+    public function paretoData(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        [$startDate, $endDate] = $this->resolvePeriod($request);
+
+        $base = DB::table('sale_items')
+            ->join('sales', 'sale_items.sale_id', '=', 'sales.id')
+            ->join('products', 'sale_items.product_id', '=', 'products.id')
+            ->where('sales.payment_status', 'paid')
+            ->whereBetween('sales.created_at', [$startDate, $endDate]);
+
+        if (!$user->isAdmin()) {
+            $base->where('products.owner_type', $user->ownerType);
+        }
+
+        $agg = $base->select(
+                'products.id',
+                'products.name as product',
+                'products.owner_type',
+                DB::raw('SUM(sale_items.subtotal) as revenue'),
+                DB::raw('SUM(sale_items.quantity) as qty')
+            )
+            ->groupBy('products.id', 'products.name', 'products.owner_type')
+            ->orderByDesc('revenue')
+            ->get();
+
+        $totalRevenue = $agg->sum('revenue');
+        $cumulative = 0;
+        $top = [];
+        foreach ($agg as $item) {
+            $cumulative += $item->revenue;
+            $perc = $totalRevenue ? ($cumulative / $totalRevenue) * 100 : 0;
+            $top[] = (object)[
+                'product' => $item->product,
+                'revenue' => $item->revenue,
+                'qty' => $item->qty,
+                'cumulative_perc' => round($perc, 2),
+            ];
+            if ($perc >= 80) {
+                break;
+            }
+        }
+
+        // Low selling products – smallest qty, limit 5
+        $low = $agg->sortBy('qty')->take(5)->values();
+
+        return ApiResponse::success([
+            'total_revenue' => $totalRevenue,
+            'top_products' => $top,
+            'low_products' => $low,
         ]);
     }
+
 
     /**
      * Stream the report as an .xlsx attachment.
@@ -137,6 +198,57 @@ class ReportController extends Controller
         ]);
     }
 
+
+    /**
+     * Return sales trend data for charts (daily or weekly).
+     */
+    public function trendData(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        [$startDate, $endDate] = $this->resolvePeriod($request);
+        $period = $request->query('period', 'daily'); // daily or weekly
+
+        $base = DB::table('sales')
+            ->join('sale_items', 'sales.id', '=', 'sale_items.sale_id')
+            ->join('products', 'sale_items.product_id', '=', 'products.id')
+            ->where('sales.payment_status', 'paid')
+            ->whereBetween('sales.created_at', [$startDate, $endDate]);
+
+        if (!$user->isAdmin()) {
+            $base->where('products.owner_type', $user->ownerType);
+        }
+
+        // Daily totals
+        if ($period === 'daily') {
+            $totals = $base->clone()
+                ->select(DB::raw('DATE(sales.created_at) as label'), DB::raw('SUM(sales.total_amount) as value'))
+                ->groupBy('label')
+                ->orderBy('label')
+                ->get();
+        } else { // weekly
+            $totals = $base->clone()
+                ->select(DB::raw('YEARWEEK(sales.created_at) as label'), DB::raw('SUM(sales.total_amount) as value'))
+                ->groupBy('label')
+                ->orderBy('label')
+                ->get();
+        }
+
+        // Top selling products (by quantity) within period
+        $topProducts = $base->clone()
+            ->select('products.name as product', DB::raw('SUM(sale_items.quantity) as sold'))
+            ->groupBy('products.id', 'products.name')
+            ->orderByDesc('sold')
+            ->limit(5)
+            ->get();
+
+        return ApiResponse::success([
+            'labels' => $totals->pluck('label'),
+            'values' => $totals->pluck('value'),
+            'top_products' => $topProducts,
+        ]);
+    }
+
+
     /**
      * Stream the report as a PDF attachment.
      */
@@ -170,9 +282,10 @@ class ReportController extends Controller
 
         return response($dompdf->output(), 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
         ]);
     }
+
 
     /**
      * @return array{0: string, 1: string}
@@ -190,6 +303,7 @@ class ReportController extends Controller
         ];
     }
 
+
     /**
      * Short scope token used in exported file names and titles.
      */
@@ -197,6 +311,7 @@ class ReportController extends Controller
     {
         return $user->isAdmin() ? 'semua-kategori' : $user->ownerType;
     }
+
 
     /**
      * Paid order items for the given owner types within a date range.

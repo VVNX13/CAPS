@@ -19,8 +19,12 @@
             <div style="font-weight:800; font-size:1.1rem; color:#0f172a;">
                 Daftar Menu &amp; Stok ({{ $scopeLabel }})
             </div>
-            <div style="display:flex; gap:8px; flex:1; max-width:360px;">
+            <div style="display:flex; gap:8px; flex:1; max-width:360px; align-items:center;">
                 <input type="text" id="ownerProductSearch" class="form-control" placeholder="🔍 Cari menu..." oninput="filterOwnerProducts()">
+                <select id="stockFilter" class="form-select" style="max-width:150px;" onchange="filterOwnerProducts()">
+                    <option value="all">Semua</option>
+                    <option value="low">Stok ≤ 5</option>
+                </select>
             </div>
         </div>
 
@@ -223,10 +227,13 @@
         }
 
         function filterOwnerProducts() {
+            const filter = document.getElementById('stockFilter')?.value || 'all';
+            renderProducts(filter);
+        }
             renderProducts();
         }
 
-        function renderProducts() {
+        function renderProducts(filter = 'all') {
             const container = document.getElementById('productGridList');
             const search = (document.getElementById('ownerProductSearch')?.value || '').toLowerCase().trim();
 

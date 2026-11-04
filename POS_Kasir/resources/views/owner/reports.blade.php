@@ -56,7 +56,33 @@
             </div>
         </div>
 
-        <!-- Table Report / Mobile Responsive Cards -->
+        <!-- Pareto Analysis -->
+        <div class="card p-3 mb-4">
+            <h4 style="margin:0 0 12px 0; font-weight:800;">Analisis Pareto (80% Pendapatan)</h4>
+            <div id="paretoTopContainer" style="margin-bottom:20px; overflow-x:auto;">
+                <table class="table table-sm">
+                    <thead><tr><th>#</th><th>Menu</th><th>Omzet (Rp)</th><th>Qty</th><th>Kumulatif %</th></tr></thead>
+                    <tbody id="paretoTopBody"></tbody>
+                </table>
+            </div>
+            <h5 style="margin:0 0 8px 0;">Produk Terjual Sedikit</h5>
+            <div id="paretoLowContainer" style="overflow-x:auto;">
+                <table class="table table-sm">
+                    <thead><tr><th>#</th><th>Menu</th><th>Omzet (Rp)</th><th>Qty</th></tr></thead>
+                    <tbody id="paretoLowBody"></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card p-3 mb-4">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                <h4 style="margin:0; font-weight:800;">Grafik Tren Penjualan</h4>
+                <select id="trendPeriod" class="form-select" style="width:150px;" onchange="loadTrendData()">
+                    <option value="daily">Harian</option>
+                    <option value="weekly">Mingguan</option>
+                </select>
+            </div>
+            <canvas id="salesTrendChart" style="height:300px;"></canvas>
+        </div>
         <div class="card p-3">
             <h4 style="font-weight:800; font-size:1.05rem; margin-bottom:12px; color:#0f172a;">Rincian Transaksi</h4>
             <div class="table-responsive">
