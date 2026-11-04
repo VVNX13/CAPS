@@ -22,6 +22,44 @@ class ProductController extends Controller
     }
 
     /**
+     * View-only stock page for owner_makanan / owner_minuman.
+     */
+    public function stockView(Request $request): View
+    {
+        $user = $request->user();
+
+        return view('owner.stock', [
+            'scopeLabel' => $user->scopeLabel(),
+            'ownerType'  => $user->ownerType,
+        ]);
+    }
+
+    /**
+     * View-only product stock list (no management actions).
+     */
+    public function stockList(Request $request): JsonResponse
+    {
+        $ownerTypes = $request->user()->ownerTypes();
+
+        $products = Product::query()
+            ->select('products.id', 'products.name', 'products.stock', 'products.price', 'products.is_active', 'products.image')
+            ->join('categories', 'products.category_id', '=', 'categories.id')
+            ->whereIn('categories.owner_type', $ownerTypes)
+            ->orderBy('products.name')
+            ->get()
+            ->map(fn (Product $p) => [
+                'id'        => $p->id,
+                'name'      => $p->name,
+                'stock'     => $p->stock,
+                'price'     => (float) $p->price,
+                'is_active' => (bool) $p->is_active,
+                'image_url' => ProductImage::url($p->image, $p->name),
+            ]);
+
+        return ApiResponse::success(['products' => $products]);
+    }
+
+    /**
      * Products and categories owned by the signed-in user.
      */
     public function list(Request $request): JsonResponse

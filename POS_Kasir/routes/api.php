@@ -64,11 +64,15 @@ Route::middleware('web')->group(function () {
             ->name('owner.unpaid.paid');
 
         Route::get('/owner/products', [ProductController::class, 'list'])->name('owner.products.index');
+        Route::get('/owner/products/stock', [ProductController::class, 'stockList'])->name('owner.products.stock');
         Route::post('/owner/products', [ProductController::class, 'save'])->name('owner.products.save');
         Route::post('/owner/products/toggle', [ProductController::class, 'toggleActive'])->name('owner.products.toggle');
         Route::delete('/owner/products/{product}', [ProductController::class, 'destroy'])->name('owner.products.destroy');
 
         Route::get('/owner/reports/data', [ReportController::class, 'getData'])->name('owner.reports.data');
+        Route::get('/owner/reports/daily', [ReportController::class, 'getDailyStats'])->name('owner.reports.daily');
+        Route::get('/owner/reports/pareto', [ReportController::class, 'paretoData'])->name('owner.reports.pareto');
+        Route::get('/owner/reports/trend', [ReportController::class, 'trendData'])->name('owner.reports.trend');
         Route::get('/owner/reports/export-excel', [ReportController::class, 'exportExcel'])->name('owner.reports.excel');
         Route::get('/owner/reports/export-pdf', [ReportController::class, 'exportPdf'])->name('owner.reports.pdf');
 

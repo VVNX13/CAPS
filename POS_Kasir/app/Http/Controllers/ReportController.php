@@ -31,6 +31,144 @@ class ReportController extends Controller
 
 
     /**
+     * Statistik eksekutif harian untuk dashboard owner.
+     * Membantu pengambilan keputusan: tren omset, jam tersibuk,
+     * rata-rata transaksi, tingkat batal, stok kritis, top menu.
+     */
+    public function getDailyStats(Request $request): JsonResponse
+    {
+        $user       = $request->user();
+        $ownerTypes = $user->ownerTypes();
+        $today      = now()->toDateString();
+        $yesterday  = now()->subDay()->toDateString();
+
+        // --- Helper closure untuk base query ---
+        $baseQuery = fn (string $date) => DB::table('sale_items as si')
+            ->join('products as p', 'si.product_id', '=', 'p.id')
+            ->join('categories as c', 'p.category_id', '=', 'c.id')
+            ->join('sales as s', 'si.sale_id', '=', 's.id')
+            ->whereIn('c.owner_type', $ownerTypes)
+            ->where('s.payment_status', 'paid')
+            ->where('s.order_status', '!=', 'canceled')
+            ->whereDate('si.created_at', $date);
+
+        // --- Omset hari ini ---
+        $todaySummary = (clone $baseQuery($today))
+            ->selectRaw('COUNT(DISTINCT s.id) as total_orders')
+            ->selectRaw('SUM(si.quantity) as total_items')
+            ->selectRaw('COALESCE(SUM(CASE WHEN COALESCE(s.subtotal_amount,0) > 0 THEN si.subtotal * s.total_amount / s.subtotal_amount ELSE si.subtotal END), 0) as net_revenue')
+            ->first();
+
+        // --- Omset kemarin (pembanding) ---
+        $yesterdaySummary = (clone $baseQuery($yesterday))
+            ->selectRaw('COUNT(DISTINCT s.id) as total_orders')
+            ->selectRaw('COALESCE(SUM(CASE WHEN COALESCE(s.subtotal_amount,0) > 0 THEN si.subtotal * s.total_amount / s.subtotal_amount ELSE si.subtotal END), 0) as net_revenue')
+            ->first();
+
+        // --- Rata-rata nilai transaksi hari ini ---
+        $avgOrder = $todaySummary->total_orders > 0
+            ? round((float) $todaySummary->net_revenue / (int) $todaySummary->total_orders, 0)
+            : 0;
+
+        // --- Persentase perubahan omset vs kemarin ---
+        $revenueChange = null;
+        if ((float) $yesterdaySummary->net_revenue > 0) {
+            $revenueChange = round(
+                (((float) $todaySummary->net_revenue - (float) $yesterdaySummary->net_revenue)
+                    / (float) $yesterdaySummary->net_revenue) * 100,
+                1
+            );
+        }
+
+        // --- Tingkat pembatalan hari ini ---
+        $totalOrdersToday = DB::table('sales as s')
+            ->join('sale_items as si', 'si.sale_id', '=', 's.id')
+            ->join('products as p', 'si.product_id', '=', 'p.id')
+            ->join('categories as c', 'p.category_id', '=', 'c.id')
+            ->whereIn('c.owner_type', $ownerTypes)
+            ->whereDate('s.created_at', $today)
+            ->distinct('s.id')
+            ->count('s.id');
+
+        $canceledToday = DB::table('sales as s')
+            ->join('sale_items as si', 'si.sale_id', '=', 's.id')
+            ->join('products as p', 'si.product_id', '=', 'p.id')
+            ->join('categories as c', 'p.category_id', '=', 'c.id')
+            ->whereIn('c.owner_type', $ownerTypes)
+            ->where('s.order_status', 'canceled')
+            ->whereDate('s.created_at', $today)
+            ->distinct('s.id')
+            ->count('s.id');
+
+        $cancelRate = $totalOrdersToday > 0
+            ? round(($canceledToday / $totalOrdersToday) * 100, 1)
+            : 0;
+
+        // --- Jam tersibuk hari ini (berdasarkan jumlah item masuk) ---
+        $peakHour = DB::table('sale_items as si')
+            ->join('products as p', 'si.product_id', '=', 'p.id')
+            ->join('categories as c', 'p.category_id', '=', 'c.id')
+            ->join('sales as s', 'si.sale_id', '=', 's.id')
+            ->whereIn('c.owner_type', $ownerTypes)
+            ->where('s.order_status', '!=', 'canceled')
+            ->whereDate('si.created_at', $today)
+            ->selectRaw('HOUR(si.created_at) as hour, COUNT(*) as count')
+            ->groupBy('hour')
+            ->orderByDesc('count')
+            ->first();
+
+        // --- Top 5 menu terlaris hari ini ---
+        $topMenus = (clone $baseQuery($today))
+            ->select('p.name as product_name')
+            ->selectRaw('SUM(si.quantity) as qty_sold')
+            ->groupBy('p.id', 'p.name')
+            ->orderByDesc('qty_sold')
+            ->limit(5)
+            ->get();
+
+        // --- Stok kritis (≤5 porsi) sesuai kategori owner ---
+        $criticalStock = DB::table('products as p')
+            ->join('categories as c', 'p.category_id', '=', 'c.id')
+            ->whereIn('c.owner_type', $ownerTypes)
+            ->where('p.is_active', 1)
+            ->where('p.stock', '<=', 5)
+            ->orderBy('p.stock')
+            ->limit(5)
+            ->get(['p.name', 'p.stock']);
+
+        // --- Transaksi belum lunas hari ini ---
+        $unpaidToday = DB::table('sales as s')
+            ->join('sale_items as si', 'si.sale_id', '=', 's.id')
+            ->join('products as p', 'si.product_id', '=', 'p.id')
+            ->join('categories as c', 'p.category_id', '=', 'c.id')
+            ->whereIn('c.owner_type', $ownerTypes)
+            ->where('s.payment_status', 'unpaid')
+            ->where('s.order_status', '!=', 'canceled')
+            ->whereDate('s.created_at', $today)
+            ->distinct('s.id')
+            ->count('s.id');
+
+        return ApiResponse::success([
+            'date'                  => $today,
+            'net_revenue'           => (float) $todaySummary->net_revenue,
+            'yesterday_revenue'     => (float) $yesterdaySummary->net_revenue,
+            'revenue_change_pct'    => $revenueChange,
+            'total_orders'          => (int) $todaySummary->total_orders,
+            'yesterday_orders'      => (int) $yesterdaySummary->total_orders,
+            'total_items'           => (int) $todaySummary->total_items,
+            'avg_order_value'       => $avgOrder,
+            'cancel_rate'           => $cancelRate,
+            'canceled_count'        => $canceledToday,
+            'unpaid_today'          => $unpaidToday,
+            'peak_hour'             => $peakHour ? (int) $peakHour->hour : null,
+            'peak_hour_count'       => $peakHour ? (int) $peakHour->count : 0,
+            'top_menus'             => $topMenus,
+            'critical_stock'        => $criticalStock,
+        ]);
+    }
+
+
+    /**
      * Report rows as JSON for the owner reports table.
      */
     public function getData(Request $request): JsonResponse
