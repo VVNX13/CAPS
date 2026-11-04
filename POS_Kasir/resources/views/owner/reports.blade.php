@@ -56,7 +56,17 @@
             </div>
         </div>
 
-        <!-- Table Report / Mobile Responsive Cards -->
+        <!-- Sales Trend Chart -->
+        <div class="card p-3 mb-4">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                <h4 style="margin:0; font-weight:800;">Grafik Tren Penjualan</h4>
+                <select id="trendPeriod" class="form-select" style="width:150px;" onchange="loadTrendData()">
+                    <option value="daily">Harian</option>
+                    <option value="weekly">Mingguan</option>
+                </select>
+            </div>
+            <canvas id="salesTrendChart" style="height:300px;"></canvas>
+        </div>
         <div class="card p-3">
             <h4 style="font-weight:800; font-size:1.05rem; margin-bottom:12px; color:#0f172a;">Rincian Transaksi</h4>
             <div class="table-responsive">

@@ -11,7 +11,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Http\JsonResponse;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
@@ -140,8 +140,55 @@ class ReportController extends Controller
     /**
      * Stream the report as a PDF attachment.
      */
-    public function exportPdf(Request $request): Response
+    /**
+     * Return sales trend data for charts (daily or weekly).
+     */
+    public function trendData(Request $request): JsonResponse
     {
+        $user = $request->user();
+        [$startDate, $endDate] = $this->resolvePeriod($request);
+        $period = $request->query('period', 'daily'); // daily or weekly
+
+        $base = DB::table('sales')
+            ->join('sale_items', 'sales.id', '=', 'sale_items.sale_id')
+            ->join('products', 'sale_items.product_id', '=', 'products.id')
+            ->where('sales.payment_status', 'paid')
+            ->whereBetween('sales.created_at', [$startDate, $endDate]);
+
+        if (!$user->isAdmin()) {
+            $base->where('products.owner_type', $user->ownerType);
+        }
+
+        // Daily totals
+        if ($period === 'daily') {
+            $totals = $base->clone()
+                ->select(DB::raw('DATE(sales.created_at) as label'), DB::raw('SUM(sales.total_amount) as value'))
+                ->groupBy('label')
+                ->orderBy('label')
+                ->get();
+        } else { // weekly
+            $totals = $base->clone()
+                ->select(DB::raw('YEARWEEK(sales.created_at) as label'), DB::raw('SUM(sales.total_amount) as value'))
+                ->groupBy('label')
+                ->orderBy('label')
+                ->get();
+        }
+
+        // Top selling products (by quantity) within period
+        $topProducts = $base->clone()
+            ->select('products.name as product', DB::raw('SUM(sale_items.quantity) as sold'))
+            ->groupBy('products.id', 'products.name')
+            ->orderByDesc('sold')
+            ->limit(5)
+            ->get();
+
+        return ApiResponse::success([
+            'labels' => $totals->pluck('label'),
+            'values' => $totals->pluck('value'),
+            'top_products' => $topProducts,
+        ]);
+    }
+
         $user = $request->user();
         [$startDate, $endDate] = $this->resolvePeriod($request);
 
