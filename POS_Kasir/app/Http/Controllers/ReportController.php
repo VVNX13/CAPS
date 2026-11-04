@@ -11,7 +11,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Collection;
-use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
@@ -28,6 +28,7 @@ class ReportController extends Controller
             'isAdmin' => $user->isAdmin(),
         ]);
     }
+
 
     /**
      * Report rows as JSON for the owner reports table.
@@ -54,6 +55,7 @@ class ReportController extends Controller
         ];
         return ApiResponse::success($response);
     }
+
 
     /**
      * Pareto analysis – top 80% revenue products and low‑selling items.
@@ -111,24 +113,6 @@ class ReportController extends Controller
         ]);
     }
 
-        $user = $request->user();
-        [$startDate, $endDate] = $this->resolvePeriod($request);
-
-        $rows = $this->queryReportData($user->ownerTypes(), $startDate, $endDate);
-
-        return ApiResponse::success([
-            'start_date' => $startDate,
-            'end_date' => $endDate,
-            'owner_type' => $user->ownerTypes(),
-            'scope_label' => $user->scopeLabel(),
-            'gross_revenue' => (float) $rows->sum('subtotal'),
-            'total_discount' => (float) $rows->sum('discount'),
-            'total_revenue' => (float) $rows->sum('net_subtotal'),
-            'total_items_sold' => (int) $rows->sum('quantity'),
-            'total_orders' => $rows->pluck('invoice_number')->unique()->count(),
-            'items' => $rows,
-        ]);
-    }
 
     /**
      * Stream the report as an .xlsx attachment.
@@ -214,9 +198,7 @@ class ReportController extends Controller
         ]);
     }
 
-    /**
-     * Stream the report as a PDF attachment.
-     */
+
     /**
      * Return sales trend data for charts (daily or weekly).
      */
@@ -266,6 +248,12 @@ class ReportController extends Controller
         ]);
     }
 
+
+    /**
+     * Stream the report as a PDF attachment.
+     */
+    public function exportPdf(Request $request): Response
+    {
         $user = $request->user();
         [$startDate, $endDate] = $this->resolvePeriod($request);
 
@@ -294,9 +282,10 @@ class ReportController extends Controller
 
         return response($dompdf->output(), 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
         ]);
     }
+
 
     /**
      * @return array{0: string, 1: string}
@@ -314,6 +303,7 @@ class ReportController extends Controller
         ];
     }
 
+
     /**
      * Short scope token used in exported file names and titles.
      */
@@ -321,6 +311,7 @@ class ReportController extends Controller
     {
         return $user->isAdmin() ? 'semua-kategori' : $user->ownerType;
     }
+
 
     /**
      * Paid order items for the given owner types within a date range.
