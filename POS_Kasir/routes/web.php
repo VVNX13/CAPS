@@ -50,6 +50,12 @@ Route::middleware('auth')->prefix('owner')->name('owner.')->group(function () {
     Route::get('/dashboard', [OwnerDashboardController::class, 'index'])->name('dashboard');
     Route::get('/products', [ProductController::class, 'index'])->name('products');
     Route::get('/reports', [ReportController::class, 'index'])->name('reports');
+    // User management (admin only)
+    Route::get('/users', [UserController::class, 'index'])->middleware('admin')->name('users');
+    Route::get('/users/list', [UserController::class, 'list'])->middleware('admin')->name('users.list');
+    Route::post('/users', [UserController::class, 'store'])->middleware('admin')->name('users.store');
+    Route::put('/users/{id}', [UserController::class, 'update'])->middleware('admin')->name('users.update');
+    Route::delete('/users/{id}', [UserController::class, 'destroy'])->middleware('admin')->name('users.destroy');
     Route::get('/belum-bayar', [ReceivableController::class, 'index'])->name('unpaid');
 
     // Dynamic QRIS and the gateway/webhook credentials are admin-only.
