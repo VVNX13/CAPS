@@ -39,6 +39,83 @@ class ReportController extends Controller
 
         $rows = $this->queryReportData($user->ownerTypes(), $startDate, $endDate);
 
+        // Existing response
+        $response = [
+            'start_date' => $startDate,
+            'end_date' => $endDate,
+            'owner_type' => $user->ownerTypes(),
+            'scope_label' => $user->scopeLabel(),
+            'gross_revenue' => (float) $rows->sum('subtotal'),
+            'total_discount' => (float) $rows->sum('discount'),
+            'total_revenue' => (float) $rows->sum('net_subtotal'),
+            'total_items_sold' => (int) $rows->sum('quantity'),
+            'total_orders' => $rows->pluck('invoice_number')->unique()->count(),
+            'items' => $rows,
+        ];
+        return ApiResponse::success($response);
+    }
+
+    /**
+     * Pareto analysis – top 80% revenue products and low‑selling items.
+     */
+    public function paretoData(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        [$startDate, $endDate] = $this->resolvePeriod($request);
+
+        $base = DB::table('sale_items')
+            ->join('sales', 'sale_items.sale_id', '=', 'sales.id')
+            ->join('products', 'sale_items.product_id', '=', 'products.id')
+            ->where('sales.payment_status', 'paid')
+            ->whereBetween('sales.created_at', [$startDate, $endDate]);
+
+        if (!$user->isAdmin()) {
+            $base->where('products.owner_type', $user->ownerType);
+        }
+
+        $agg = $base->select(
+                'products.id',
+                'products.name as product',
+                'products.owner_type',
+                DB::raw('SUM(sale_items.subtotal) as revenue'),
+                DB::raw('SUM(sale_items.quantity) as qty')
+            )
+            ->groupBy('products.id', 'products.name', 'products.owner_type')
+            ->orderByDesc('revenue')
+            ->get();
+
+        $totalRevenue = $agg->sum('revenue');
+        $cumulative = 0;
+        $top = [];
+        foreach ($agg as $item) {
+            $cumulative += $item->revenue;
+            $perc = $totalRevenue ? ($cumulative / $totalRevenue) * 100 : 0;
+            $top[] = (object)[
+                'product' => $item->product,
+                'revenue' => $item->revenue,
+                'qty' => $item->qty,
+                'cumulative_perc' => round($perc, 2),
+            ];
+            if ($perc >= 80) {
+                break;
+            }
+        }
+
+        // Low selling products – smallest qty, limit 5
+        $low = $agg->sortBy('qty')->take(5)->values();
+
+        return ApiResponse::success([
+            'total_revenue' => $totalRevenue,
+            'top_products' => $top,
+            'low_products' => $low,
+        ]);
+    }
+
+        $user = $request->user();
+        [$startDate, $endDate] = $this->resolvePeriod($request);
+
+        $rows = $this->queryReportData($user->ownerTypes(), $startDate, $endDate);
+
         return ApiResponse::success([
             'start_date' => $startDate,
             'end_date' => $endDate,
