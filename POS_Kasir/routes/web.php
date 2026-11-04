@@ -11,6 +11,7 @@ use App\Http\Controllers\QrCenterController;
 use App\Http\Controllers\QrisController;
 use App\Http\Controllers\ReceivableController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -50,6 +51,7 @@ Route::middleware('auth')->prefix('owner')->name('owner.')->group(function () {
     Route::get('/dashboard', [OwnerDashboardController::class, 'index'])->name('dashboard');
     Route::get('/products', [ProductController::class, 'index'])->name('products');
     Route::get('/reports', [ReportController::class, 'index'])->name('reports');
+    Route::get('/stok', [ProductController::class, 'stockView'])->name('stock');
     // User management (admin only)
     Route::get('/users', [UserController::class, 'index'])->middleware('admin')->name('users');
     Route::get('/users/list', [UserController::class, 'list'])->middleware('admin')->name('users.list');
