@@ -10,13 +10,13 @@
  *   - /receipt/*     never cached (contains live payment status)
  *   - non-GET        never touched (checkout must hit the server)
  *
- * Bump VERSION whenever this file changes so every installed app rebuilds its
+ * Bump SW_VERSION whenever this file changes so every installed app rebuilds its
  * caches on the next visit.
  */
 
-const VERSION = 'v6';
-const STATIC_CACHE = `tteras-static-${VERSION}`;
-const PAGE_CACHE = `tteras-pages-${VERSION}`;
+const SW_VERSION = 'v7';
+const STATIC_CACHE = `tteras-static-${SW_VERSION}`;
+const PAGE_CACHE = `tteras-pages-${SW_VERSION}`;
 
 const PRECACHE = [
     '/',

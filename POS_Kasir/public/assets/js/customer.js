@@ -6,6 +6,7 @@ function initCustomerMenu() {
   renderCartBadge();
   watchConnection();
   applyReorderFromUrl();
+  initCustomerPreferences();
 }
 
 /**
@@ -664,4 +665,350 @@ function addPreviewProductToCart() {
     unit.note = customNote;
   }
   closeProductPreview();
+}
+
+/* ==========================================================================
+   Customer Preference Questionnaire & Recommendation Engine
+   ========================================================================== */
+
+const PREF_KEYWORDS = {
+  pedas: ['pedas', 'sambal', 'cabe', 'cabai', 'rawit', 'rujak'],
+  gurih: ['gurih', 'crispy', 'krispi', 'rempah', 'truffle', 'fries', 'seafood', 'bakar', 'goreng', 'asin', 'buntut', 'keju'],
+  manis: ['manis', 'madu', 'karamel', 'caramel', 'rujak'],
+  hangat: ['sop', 'buntut', 'kuah', 'hangat', 'rempah', 'hot', 'mie', 'nasi'],
+  segar: ['segar', 'mocktail', 'sparkler', 'lemon', 'mint', 'dingin', 'jus', 'soda'],
+  kopi: ['kopi', 'espresso', 'americano', 'macchiato', 'cold brew', 'coffee'],
+  creamy: ['creamy', 'susu', 'latte', 'alpukat', 'matcha', 'cheese', 'keju'],
+  buah: ['jus', 'buah', 'mangga', 'alpukat', 'berry', 'lemon']
+};
+
+const PREF_LABELS = {
+  pedas: 'Pedas & Gurih 🌶️',
+  gurih: 'Gurih / Crispy 🍗',
+  manis: 'Manis & Legit 🍯',
+  hangat: 'Kuah Rempah Hangat 🍲',
+  segar: 'Dingin & Segar 🧊',
+  kopi: 'Kopi Mantap ☕',
+  creamy: 'Creamy & Susu 🥛',
+  buah: 'Jus Buah Asli 🥭'
+};
+
+const FOOD_PREFS = new Set(['pedas', 'gurih', 'manis', 'hangat']);
+const DRINK_PREFS = new Set(['segar', 'kopi', 'creamy', 'buah']);
+
+window.__PREF_PRODUCTS_MAP__ = {};
+
+function getCatalogProducts() {
+  if (Array.isArray(window.__ALL_CATALOG_PRODUCTS__) && window.__ALL_CATALOG_PRODUCTS__.length > 0) {
+    return window.__ALL_CATALOG_PRODUCTS__;
+  }
+
+  // Fallback: extract directly from DOM product cards
+  const cards = document.querySelectorAll('#productGrid .card-product');
+  const list = [];
+  cards.forEach((card, idx) => {
+    const titleEl = card.querySelector('.card-product-title');
+    const price = parseFloat(card.dataset.price) || 0;
+    const descEl = card.querySelector('.card-product-desc');
+    const imgEl = card.querySelector('.card-product-img');
+    const badgeEl = card.querySelector('.brand-badge');
+    const isFood = badgeEl?.classList.contains('badge-food') || false;
+
+    const onclickStr = card.getAttribute('onclick') || '';
+    const matchId = onclickStr.match(/id:\s*(\d+)/);
+    const id = matchId ? parseInt(matchId[1], 10) : (idx + 1);
+
+    list.push({
+      id: id,
+      name: titleEl ? titleEl.innerText.trim() : (card.dataset.name || ''),
+      price: price,
+      category: badgeEl ? badgeEl.innerText.trim() : (isFood ? 'Makanan' : 'Minuman'),
+      ownerType: isFood ? 'makanan' : 'minuman',
+      stock: 20,
+      desc: descEl ? descEl.innerText.trim() : '',
+      image: '',
+      imageUrl: imgEl ? imgEl.getAttribute('src') || '' : ''
+    });
+  });
+
+  window.__ALL_CATALOG_PRODUCTS__ = list;
+  return list;
+}
+
+function initCustomerPreferences() {
+  const status = sessionStorage.getItem('taman_pref_status');
+  if (!status) {
+    // Show modal quickly but smoothly after initial page load
+    setTimeout(() => {
+      openPreferenceModal();
+    }, 380);
+  } else if (status === 'answered') {
+    let tags = [];
+    try {
+      tags = JSON.parse(sessionStorage.getItem('taman_pref_tags') || '[]');
+    } catch (e) {
+      tags = [];
+    }
+    if (tags.length > 0) {
+      applyPreferenceRecommendations(tags, false);
+    } else {
+      showPreferenceInviteBanner();
+    }
+  } else {
+    // status is skipped
+    showPreferenceInviteBanner();
+  }
+}
+
+function openPreferenceModal() {
+  const modal = document.getElementById('preferenceModal');
+  if (!modal) return;
+
+  // Restore active chips if saved
+  let savedTags = [];
+  try {
+    savedTags = JSON.parse(sessionStorage.getItem('taman_pref_tags') || '[]');
+  } catch (e) {}
+
+  document.querySelectorAll('#preferenceModal .pref-chip').forEach(chip => {
+    const pref = chip.dataset.pref;
+    chip.classList.toggle('active', savedTags.includes(pref));
+  });
+
+  updatePrefSubmitBtnText();
+
+  modal.classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+function closePreferenceModal() {
+  const modal = document.getElementById('preferenceModal');
+  if (modal) {
+    modal.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+}
+
+function skipPreferences() {
+  sessionStorage.setItem('taman_pref_status', 'skipped');
+  closePreferenceModal();
+  showPreferenceInviteBanner();
+  const recSec = document.getElementById('preferenceRecSection');
+  if (recSec) recSec.style.display = 'none';
+}
+
+function togglePrefChip(button) {
+  button.classList.toggle('active');
+  updatePrefSubmitBtnText();
+}
+
+function updatePrefSubmitBtnText() {
+  const count = document.querySelectorAll('#preferenceModal .pref-chip.active').length;
+  const btn = document.getElementById('btnSavePreferences');
+  if (btn) {
+    btn.innerText = count > 0 ? `Tampilkan Rekomendasi (${count})` : 'Tampilkan Rekomendasi';
+  }
+}
+
+function submitPreferences() {
+  const activeChips = Array.from(document.querySelectorAll('#preferenceModal .pref-chip.active'));
+  const tags = activeChips.map(c => c.dataset.pref).filter(Boolean);
+
+  if (tags.length === 0) {
+    showToast('Silakan pilih minimal 1 preferensi, atau klik Lewati');
+    return;
+  }
+
+  sessionStorage.setItem('taman_pref_status', 'answered');
+  sessionStorage.setItem('taman_pref_tags', JSON.stringify(tags));
+  closePreferenceModal();
+  applyPreferenceRecommendations(tags, true);
+}
+
+function showPreferenceInviteBanner() {
+  const banner = document.getElementById('prefInviteBanner');
+  if (banner) banner.style.display = 'flex';
+  const recSec = document.getElementById('preferenceRecSection');
+  if (recSec) recSec.style.display = 'none';
+}
+
+function applyPreferenceRecommendations(tags, shouldScroll) {
+  const banner = document.getElementById('prefInviteBanner');
+  if (banner) banner.style.display = 'none';
+
+  const section = document.getElementById('preferenceRecSection');
+  const grid = document.getElementById('prefCardsGrid');
+  const labelEl = document.getElementById('prefActiveTagsLabel');
+  if (!section || !grid) return;
+
+  const catalog = getCatalogProducts();
+  if (!catalog.length) return;
+
+  // Build active label text
+  const labelParts = tags.map(t => PREF_LABELS[t] || t).filter(Boolean);
+  if (labelEl) {
+    labelEl.innerText = labelParts.length > 0
+      ? `Disaring berdasarkan selera: ${labelParts.join(', ')}.`
+      : 'Disaring khusus berdasarkan preferensi rasa yang Anda pilih.';
+  }
+
+  // Separate food preferences vs drink preferences
+  const foodTags = tags.filter(t => FOOD_PREFS.has(t));
+  const drinkTags = tags.filter(t => DRINK_PREFS.has(t));
+
+  const scoreProductsList = (productList, relevantTags) => {
+    const scoredList = [];
+    productList.forEach(product => {
+      let score = 0;
+      const pName = (product.name || '').toLowerCase();
+      const pDesc = (product.desc || '').toLowerCase();
+      const pCat = (product.category || '').toLowerCase();
+      let matchedReason = '';
+
+      relevantTags.forEach(tag => {
+        const kws = PREF_KEYWORDS[tag] || [tag];
+        kws.forEach(kw => {
+          if (pName.includes(kw)) {
+            score += 6;
+            if (!matchedReason) matchedReason = PREF_LABELS[tag] || tag;
+          }
+          if (pDesc.includes(kw)) {
+            score += 3;
+            if (!matchedReason) matchedReason = PREF_LABELS[tag] || tag;
+          }
+          if (pCat.includes(kw)) {
+            score += 1.5;
+          }
+        });
+      });
+
+      if (score > 0) {
+        scoredList.push({
+          product,
+          score,
+          reason: matchedReason || (product.ownerType === 'makanan' ? 'Menu Pilihan' : 'Minuman Pilihan')
+        });
+      }
+    });
+
+    scoredList.sort((a, b) => b.score - a.score);
+    return scoredList;
+  };
+
+  const available = catalog.filter(p => (p.stock || 0) > 0);
+  const allFood = available.filter(p => p.ownerType === 'makanan');
+  const allDrinks = available.filter(p => p.ownerType !== 'makanan');
+
+  let topItems = [];
+
+  // CASE 1: Only Food Preferences selected -> Strictly Food ONLY
+  if (foodTags.length > 0 && drinkTags.length === 0) {
+    const scoredFood = scoreProductsList(allFood, foodTags);
+    topItems = scoredFood.length > 0
+      ? scoredFood.slice(0, 4)
+      : allFood.slice(0, 3).map(p => ({ product: p, score: 0, reason: 'Menu Pilihan' }));
+  }
+  // CASE 2: Only Drink Preferences selected -> Strictly Drinks ONLY
+  else if (foodTags.length === 0 && drinkTags.length > 0) {
+    const scoredDrinks = scoreProductsList(allDrinks, drinkTags);
+    topItems = scoredDrinks.length > 0
+      ? scoredDrinks.slice(0, 4)
+      : allDrinks.slice(0, 3).map(p => ({ product: p, score: 0, reason: 'Minuman Pilihan' }));
+  }
+  // CASE 3: Both Food and Drink Preferences selected -> Balanced Top Food + Top Drinks
+  else if (foodTags.length > 0 && drinkTags.length > 0) {
+    const scoredFood = scoreProductsList(allFood, foodTags);
+    const topFoods = scoredFood.length > 0
+      ? scoredFood.slice(0, 2)
+      : allFood.slice(0, 2).map(p => ({ product: p, score: 0, reason: 'Menu Pilihan' }));
+
+    const scoredDrinks = scoreProductsList(allDrinks, drinkTags);
+    const topDrinks = scoredDrinks.length > 0
+      ? scoredDrinks.slice(0, 2)
+      : allDrinks.slice(0, 2).map(p => ({ product: p, score: 0, reason: 'Minuman Pilihan' }));
+
+    topItems = [...topFoods, ...topDrinks];
+  } else {
+    // Fallback if tags empty
+    topItems = allFood.slice(0, 2).concat(allDrinks.slice(0, 2)).map(p => ({
+      product: p,
+      score: 0,
+      reason: 'Rekomendasi Spesial'
+    }));
+  }
+
+  // Clear map and populate fresh payload
+  window.__PREF_PRODUCTS_MAP__ = {};
+
+  grid.innerHTML = topItems.map(item => {
+    const p = item.product;
+    const isFood = p.ownerType === 'makanan';
+    const badgeText = item.reason;
+
+    window.__PREF_PRODUCTS_MAP__[p.id] = {
+      id: p.id,
+      name: p.name,
+      price: p.price,
+      image: p.imageUrl || '',
+      category: p.category,
+      ownerType: p.ownerType,
+      stock: p.stock,
+      desc: p.desc,
+      badge: badgeText
+    };
+
+    const imgHtml = p.imageUrl
+      ? `<img src="${escapeHtml(p.imageUrl)}" alt="${escapeHtml(p.name)}" loading="lazy">`
+      : `<div class="card-product-img card-product-img-placeholder ${isFood ? 'ph-food' : 'ph-drink'}" style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:2.2rem;"><span>${isFood ? '🍲' : '🥤'}</span></div>`;
+
+    return `
+      <div class="rec-card" style="cursor:pointer;" onclick="openPrefProductPreview(event, ${p.id})">
+        <div class="rec-card-img-wrap">
+          <span class="rec-card-badge">${escapeHtml(badgeText)}</span>
+          <span class="rec-card-sales-pill">${escapeHtml(p.category || (isFood ? 'Makanan' : 'Minuman'))}</span>
+          ${imgHtml}
+        </div>
+        <div class="rec-card-body">
+          <div>
+            <div class="rec-card-title">${escapeHtml(p.name)}</div>
+            <div class="rec-card-desc">${escapeHtml(p.desc || '')}</div>
+          </div>
+          <div class="rec-card-footer">
+            <div class="rec-card-price">${formatRupiah(p.price)}</div>
+            <button type="button" class="rec-card-btn" onclick="addPrefProductToCart(event, ${p.id})">
+              + Tambah
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Animate grid smoothly on update
+  grid.classList.remove('pref-fade-in');
+  void grid.offsetWidth;
+  grid.classList.add('pref-fade-in');
+
+  section.style.display = 'block';
+
+  if (shouldScroll) {
+    setTimeout(() => {
+      section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 120);
+    showToast('🎯 Rekomendasi selera Anda telah diperbarui!');
+  }
+}
+
+function openPrefProductPreview(event, id) {
+  if (event && event.target && event.target.closest('button')) return;
+  const p = window.__PREF_PRODUCTS_MAP__[id];
+  if (p) openProductPreview(event, p);
+}
+
+function addPrefProductToCart(event, id) {
+  if (event) event.stopPropagation();
+  const p = window.__PREF_PRODUCTS_MAP__[id];
+  if (p) {
+    addToCart(p.id, p.name, p.price, p.image, p.category);
+  }
 }
