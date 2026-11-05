@@ -52,7 +52,7 @@
                 <div class="form-group">
                     <label class="form-label" for="username">Username</label>
                     <input type="text" id="username" name="username" class="form-control"
-                           value="{{ old('username') }}" placeholder="owner_makanan / owner_minuman / admin_kasir"
+                           value="{{ old('username') }}" placeholder="owner_makanan / admin_kasir / dapur"
                            autocomplete="username" autocapitalize="none" spellcheck="false" required>
                 </div>
 
@@ -74,7 +74,7 @@
 
             <div class="portal-quick">
                 <div class="portal-quick-title">ϟ Akses Cepat Demo (1-Click Login):</div>
-                <div class="portal-quick-grid">
+                <div class="portal-quick-grid" style="grid-template-columns: 1fr 1fr;">
                     <button type="button" class="portal-quick-button" onclick="quickLogin('owner_makanan')">
                         <span class="portal-dot" style="background:#9b641c"></span>Owner Makanan
                     </button>
@@ -82,7 +82,10 @@
                         <span class="portal-dot" style="background:#2f7a4d"></span>Owner Minuman
                     </button>
                     <button type="button" class="portal-quick-button" onclick="quickLogin('admin_kasir')">
-                        <span class="portal-dot" style="background:#285c83"></span>Kasir &amp; Dapur
+                        <span class="portal-dot" style="background:#285c83"></span>Kasir / Admin
+                    </button>
+                    <button type="button" class="portal-quick-button" onclick="quickLogin('dapur')">
+                        <span class="portal-dot" style="background:#7c3aed"></span>Dapur / KDS
                     </button>
                 </div>
                 <div>

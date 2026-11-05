@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\CustomerHistoryController;
 use App\Http\Controllers\DiscountController;
+use App\Http\Controllers\KitchenController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\OwnerDashboardController;
 use App\Http\Controllers\PollingController;
@@ -112,4 +113,13 @@ Route::middleware('web')->group(function () {
     */
     Route::post('/webhook/payment', [WebhookController::class, 'handlePayment'])->name('webhooks.payment');
     Route::post('/webhook/qris', [WebhookController::class, 'handlePayment'])->name('webhooks.qris');
+
+    /* ── Dapur (Kitchen) API ── */
+    Route::middleware(['auth', 'kitchen'])->group(function () {
+        Route::get('/dapur/orders', [KitchenController::class, 'getOrders'])->name('dapur.orders');
+        Route::get('/dapur/history', [KitchenController::class, 'getHistory'])->name('dapur.history');
+        Route::post('/dapur/item/status', [KitchenController::class, 'updateItemStatus'])->name('dapur.item-status');
+        Route::post('/dapur/sale/start', [KitchenController::class, 'startCookingSale'])->name('dapur.sale-start');
+        Route::post('/dapur/sale/complete', [KitchenController::class, 'completeSale'])->name('dapur.sale-complete');
+    });
 });

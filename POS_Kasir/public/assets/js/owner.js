@@ -5,8 +5,10 @@ let currentOrdersCache = [];
 let activeOrderFilter = 'all';
 let startWorkingLabel = 'Mulai Masak';
 let dashboardLoadInFlight = false;
+let previousSalesStatusMap = new Map();
+let lastOrderFingerprint = '';
 
-// Web Audio API Synthesizer (Bip/Chime Suara Bel Kasir)
+// Web Audio API Synthesizer (Bip/Chime 2-tone untuk Pesanan Baru Masuk: D5 -> A5)
 function playBeepSound() {
   if (!soundEnabled) return;
   try {
@@ -14,7 +16,6 @@ function playBeepSound() {
     if (!AudioContext) return;
     const ctx = new AudioContext();
 
-    // 2-tone melodic chime
     const now = ctx.currentTime;
     const osc1 = ctx.createOscillator();
     const gain1 = ctx.createGain();
@@ -28,6 +29,34 @@ function playBeepSound() {
 
     osc1.start(now);
     osc1.stop(now + 0.6);
+  } catch (e) {
+    console.log('Audio notification error:', e);
+  }
+}
+
+// Web Audio API Synthesizer (Chime 3-tone Melodis untuk Pesanan Selesai Masak Dapur: G5 -> B5 -> D6)
+function playOrderDoneSound() {
+  if (!soundEnabled) return;
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'triangle'; // Nada hangat bel siap saji
+    osc.frequency.setValueAtTime(783.99, now);         // G5
+    osc.frequency.setValueAtTime(987.77, now + 0.12);  // B5
+    osc.frequency.setValueAtTime(1174.66, now + 0.24); // D6
+
+    gain.gain.setValueAtTime(0.35, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start(now);
+    osc.stop(now + 0.8);
   } catch (e) {
     console.log('Audio notification error:', e);
   }
@@ -47,30 +76,49 @@ function initOwnerPolling(ownerTypes, workingLabel) {
     if (e.key === 'Escape' && discountModalState) closeDiscountModal();
   });
 
-  // Polling setiap 5 detik
+  // Polling setiap 5 detik saat tab aktif
+  if (pollingInterval) clearInterval(pollingInterval);
   pollingInterval = setInterval(() => {
-    checkNewOrdersPolling(ownerTypes);
+    if (document.visibilityState === 'visible') {
+      loadDashboardData();
+    }
   }, 5000);
 
+  // Sync instan saat kembali ke tab kasir
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      loadDashboardData();
+    }
+  });
+
   // Setup sound switch button
-  const soundBtn = document.getElementById('btnToggleSound');
-  if (soundBtn) {
-    const svgOn  = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg> Audio`;
-    const svgOff = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg> Mute`;
-    soundBtn.innerHTML = svgOn;
-    soundBtn.addEventListener('click', () => {
-      soundEnabled = !soundEnabled;
-      soundBtn.innerHTML = soundEnabled ? svgOn : svgOff;
-      soundBtn.classList.toggle('btn-primary', soundEnabled);
-      soundBtn.classList.toggle('btn-outline', !soundEnabled);
-      if (soundEnabled) playBeepSound();
-    });
-  }
+  setupSoundToggle();
 }
 
+function setupSoundToggle() {
+  const soundBtn = document.getElementById('btnToggleSound');
+  if (!soundBtn || soundBtn.dataset.bound) return;
+  soundBtn.dataset.bound = 'true';
+
+  const svgOn  = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg> Audio`;
+  const svgOff = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg> Mute`;
+
+  soundBtn.innerHTML = soundEnabled ? svgOn : svgOff;
+  soundBtn.addEventListener('click', () => {
+    soundEnabled = !soundEnabled;
+    soundBtn.innerHTML = soundEnabled ? svgOn : svgOff;
+    soundBtn.classList.toggle('btn-primary', soundEnabled);
+    soundBtn.classList.toggle('btn-outline', !soundEnabled);
+    soundBtn.title = soundEnabled ? 'Suara Notifikasi Aktif' : 'Suara Notifikasi Dimatikan';
+    if (soundEnabled) playOrderDoneSound();
+  });
+}
+
+// Auto-bind sound button saat DOM selesai dimuat
+document.addEventListener('DOMContentLoaded', setupSoundToggle);
+
 async function loadDashboardData() {
-  // Cegah request tumpang tindih: polling 5 detik + klik tombol bisa memicu
-  // load bersamaan, dan respons yang telat bisa menimpa data yang lebih baru.
+  // Cegah request tumpang tindih
   if (dashboardLoadInFlight) return;
   dashboardLoadInFlight = true;
 
@@ -78,10 +126,81 @@ async function loadDashboardData() {
     const res = await fetch('/api/owner/orders');
     const data = await res.json();
     if (data.success) {
-      lastSeenOrderId = data.data.last_id || 0;
-      currentOrdersCache = data.data.orders || [];
+      const newOrders = data.data.orders || [];
+      const newLastId = Number(data.data.last_id) || 0;
+
+      // --- 1. Deteksi Pesanan Baru Masuk ---
+      if (lastSeenOrderId > 0 && newLastId > lastSeenOrderId) {
+        playBeepSound();
+        showToast('Pesanan Baru Masuk dari Pelanggan!', 'info');
+
+        const prevTitle = document.title;
+        document.title = '🔔 Pesanan Baru Masuk! — Kasir';
+        setTimeout(() => { document.title = prevTitle; }, 3500);
+      }
+
+      // --- 2. Deteksi Pesanan Selesai Dimasak Dapur ---
+      const currentSalesMap = new Map();
+      newOrders.forEach(item => {
+        if (!currentSalesMap.has(item.sale_id)) {
+          currentSalesMap.set(item.sale_id, {
+            sale_id: item.sale_id,
+            invoice_number: item.invoice_number,
+            customer_name: item.customer_name,
+            service_type: item.service_type,
+            table_number: item.table_number,
+            items: []
+          });
+        }
+        currentSalesMap.get(item.sale_id).items.push(item);
+      });
+
+      const getSaleStatus = (sale) => {
+        const hasP = sale.items.some(i => i.item_status === 'pending');
+        const hasC = sale.items.some(i => i.item_status === 'cooking');
+        return hasP ? 'pending' : hasC ? 'cooking' : 'done';
+      };
+
+      if (previousSalesStatusMap.size > 0) {
+        let hasAnyDone = false;
+        currentSalesMap.forEach((sale, saleId) => {
+          const prevStatus = previousSalesStatusMap.get(saleId);
+          const currStatus = getSaleStatus(sale);
+
+          // Transisi ke done (selesai proses masaknya)
+          if (prevStatus && prevStatus !== 'done' && currStatus === 'done') {
+            hasAnyDone = true;
+            const tableText = sale.service_type === 'dine_in' && sale.table_number
+              ? ` (Meja ${sale.table_number})`
+              : ' (Takeaway)';
+            showToast(`Pesanan ${sale.invoice_number}${tableText} selesai dimasak!`, 'success');
+          }
+        });
+
+        if (hasAnyDone) {
+          playOrderDoneSound();
+          const prevTitle = document.title;
+          document.title = '🔔 Pesanan Selesai Masak! — Kasir';
+          setTimeout(() => { document.title = prevTitle; }, 4000);
+        }
+      }
+
+      // Update state peta status penjualan
+      currentSalesMap.forEach((sale, saleId) => {
+        previousSalesStatusMap.set(saleId, getSaleStatus(sale));
+      });
+
+      lastSeenOrderId = Math.max(lastSeenOrderId, newLastId);
+
+      // --- 3. Render Kartu & Metrik ---
+      const fingerprint = newOrders.map(o => `${o.item_id}:${o.item_status}:${o.payment_status}`).join('|');
+      if (fingerprint !== lastOrderFingerprint) {
+        lastOrderFingerprint = fingerprint;
+        currentOrdersCache = newOrders;
+        renderOrderCards(currentOrdersCache);
+      }
+
       renderKPIStats(data.data.stats);
-      renderOrderCards(currentOrdersCache);
     }
   } catch (e) {
     console.error('Error fetching dashboard:', e);
@@ -91,28 +210,8 @@ async function loadDashboardData() {
 }
 
 async function checkNewOrdersPolling(ownerTypes) {
-  try {
-    const res = await fetch(`/api/orders/check-new?type=${encodeURIComponent(ownerTypes)}&last_id=${lastSeenOrderId}`);
-    const response = await res.json();
-
-    // ApiResponse::success() membungkus payload di dalam property "data".
-    const poll = response.data || {};
-
-    if (poll.has_new_order && poll.count > 0) {
-      lastSeenOrderId = poll.latest_id;
-      
-      // Bunyikan Audio Bip
-      playBeepSound();
-
-      // Notifikasi Toast
-      showToast(`⚡ ${poll.count} Pesanan Baru Masuk!`);
-
-      // Refresh Tampilan Dashboard
-      await loadDashboardData();
-    }
-  } catch (err) {
-    console.warn('Polling check failed:', err);
-  }
+  // Diserap langsung ke dalam loadDashboardData() di atas
+  await loadDashboardData();
 }
 
 function renderKPIStats(stats) {
@@ -724,7 +823,7 @@ function formatRupiah(num) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num);
 }
 
-function showToast(msg) {
+function showToast(msg, type = 'info') {
   let container = document.getElementById('toastContainer');
   if (!container) {
     container = document.createElement('div');
@@ -733,14 +832,18 @@ function showToast(msg) {
     document.body.appendChild(container);
   }
 
+  const iconSvg = type === 'success'
+    ? `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`
+    : `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>`;
+
   const toast = document.createElement('div');
   toast.className = 'toast';
-  toast.innerHTML = `<span>🔔</span> <span>${msg}</span>`;
+  toast.innerHTML = `<span style="display:inline-flex;align-items:center;flex-shrink:0;">${iconSvg}</span> <span>${escapeHtml(msg)}</span>`;
   container.appendChild(toast);
 
   setTimeout(() => {
     toast.remove();
-  }, 3500);
+  }, 4000);
 }
 
 function escapeHtml(value) {

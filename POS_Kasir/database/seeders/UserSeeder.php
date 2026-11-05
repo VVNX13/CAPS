@@ -8,7 +8,7 @@ use Illuminate\Database\Seeder;
 class UserSeeder extends Seeder
 {
     /**
-     * Demo accounts for the three roles.
+     * Demo accounts for the four roles.
      *
      * The password is hashed through the model's `hashed` cast, so a plain
      * string can be assigned here.
@@ -20,24 +20,31 @@ class UserSeeder extends Seeder
         return [
             [
                 'username' => 'owner_makanan',
-                'name' => 'Chef Sukma',
-                'email' => 'makanan@resto.id',
+                'name'     => 'Chef Sukma',
+                'email'    => 'makanan@resto.id',
                 'password' => 'password123',
-                'role' => 'owner_makanan',
+                'role'     => 'owner_makanan',
             ],
             [
                 'username' => 'owner_minuman',
-                'name' => 'Barista Akmal',
-                'email' => 'minuman@resto.id',
+                'name'     => 'Barista Akmal',
+                'email'    => 'minuman@resto.id',
                 'password' => 'password123',
-                'role' => 'owner_minuman',
+                'role'     => 'owner_minuman',
             ],
             [
                 'username' => 'admin_kasir',
-                'name' => 'Kasir Utama / Admin',
-                'email' => 'admin@resto.id',
+                'name'     => 'Kasir Utama',
+                'email'    => 'admin@resto.id',
                 'password' => 'password123',
-                'role' => 'admin',
+                'role'     => 'admin',
+            ],
+            [
+                'username' => 'dapur',
+                'name'     => 'Tim Dapur',
+                'email'    => 'dapur@resto.id',
+                'password' => 'password123',
+                'role'     => 'dapur',
             ],
         ];
     }

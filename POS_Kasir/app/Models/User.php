@@ -40,6 +40,11 @@ class User extends Authenticatable
         return $this->role === 'admin';
     }
 
+    public function isKitchen(): bool
+    {
+        return $this->role === 'dapur';
+    }
+
     /**
      * Every owner type this account may see.
      *
@@ -50,7 +55,7 @@ class User extends Authenticatable
         return match ($this->role) {
             'owner_minuman' => ['minuman'],
             'owner_makanan' => ['makanan'],
-            default => ['makanan', 'minuman'],
+            default         => ['makanan', 'minuman'],
         };
     }
 
@@ -75,16 +80,21 @@ class User extends Authenticatable
         return match ($this->role) {
             'owner_minuman' => 'Minuman',
             'owner_makanan' => 'Makanan',
-            default => 'Semua Kategori',
+            'dapur'         => 'Dapur',
+            default         => 'Semua Kategori',
         };
     }
 
     /**
-     * Badge text, e.g. "MAKANAN", "MINUMAN", "KASIR".
+     * Badge text, e.g. "MAKANAN", "MINUMAN", "KASIR", "DAPUR".
      */
     public function scopeBadge(): string
     {
-        return $this->isAdmin() ? 'KASIR' : strtoupper($this->ownerType);
+        return match ($this->role) {
+            'admin' => 'KASIR',
+            'dapur' => 'DAPUR',
+            default => strtoupper($this->ownerType),
+        };
     }
 
     /**
@@ -95,7 +105,7 @@ class User extends Authenticatable
         return match ($this->role) {
             'owner_minuman' => 'Mulai Buat Minuman',
             'owner_makanan' => 'Mulai Masak',
-            default => 'Mulai Proses',
+            default         => 'Mulai Proses',
         };
     }
 }

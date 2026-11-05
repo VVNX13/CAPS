@@ -61,14 +61,19 @@ class LoginController extends Controller
 
         $user = $request->user();
 
+        // Dapur role gets its own KDS, not the owner dashboard
+        $redirect = $user->isKitchen()
+            ? route('dapur.dashboard')
+            : route('owner.dashboard');
+
         if (! $wantsJson) {
-            return redirect()->route('owner.dashboard');
+            return redirect($redirect);
         }
 
         return ApiResponse::success([
-            'redirect' => route('owner.dashboard'),
-            'role' => $user->role,
-            'name' => $user->name,
+            'redirect' => $redirect,
+            'role'     => $user->role,
+            'name'     => $user->name,
         ], 'Login berhasil');
     }
 

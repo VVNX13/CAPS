@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\CustomerHistoryController;
 use App\Http\Controllers\CustomerMenuController;
+use App\Http\Controllers\KitchenController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\OwnerDashboardController;
 use App\Http\Controllers\PromoCodeController;
@@ -67,4 +68,14 @@ Route::middleware('auth')->prefix('owner')->name('owner.')->group(function () {
     Route::get('/promo', [PromoCodeController::class, 'index'])
         ->middleware('admin')
         ->name('promos');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Dapur (Kitchen Display System)
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware(['auth', 'kitchen'])->prefix('dapur')->name('dapur.')->group(function () {
+    Route::get('/dashboard', [KitchenController::class, 'index'])->name('dashboard');
 });
