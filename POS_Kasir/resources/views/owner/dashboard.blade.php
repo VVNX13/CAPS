@@ -1,11 +1,11 @@
 @extends('layouts.app')
 
-@section('title', 'Dashboard ' . $scopeLabel . ' - ' . config('app.name'))
+@section('title', ($dashboardTitle ?? 'Dashboard ' . $scopeLabel) . ' - ' . config('app.name'))
 
 @section('content')
     @include('owner.partials.navbar', [
         'current'    => 'dashboard',
-        'title'      => 'Dashboard ' . $scopeLabel,
+        'title'      => $dashboardTitle ?? 'Dashboard ' . $scopeLabel,
         'scopeBadge' => $scopeBadge,
     ])
 
@@ -15,7 +15,6 @@
              OWNER — Executive Dashboard
         ═══════════════════════════════════════════════ --}}
         @if (!$user->isAdmin())
-
         <style>
             /* ── Executive Dashboard Styles ── */
             .exec-header {
@@ -537,13 +536,17 @@
              ADMIN — Queue Dashboard (unchanged)
         ═══════════════════════════════════════════════ --}}
             @push('navbar-actions')
-                <button id="btnToggleSound" class="btn btn-primary btn-sm">🔔 Audio</button>
+                <button id="btnToggleSound" class="btn btn-outline btn-sm" style="display:flex;align-items:center;gap:6px;">
+                    <svg id="soundIconOn" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+                    <svg id="soundIconOff" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+                    Audio
+                </button>
             @endpush
 
             <div class="owner-welcome-card">
                 <div>
-                    <h2 style="font-size:1.2rem; font-weight:800; color:#0f172a;">Halo, {{ $user->name }} 👋</h2>
-                    <p style="font-size:0.85rem; color:#64748b; margin-top:2px;">Antrean pesanan dapur (Auto-update real-time)</p>
+                    <div style="font-size:1.15rem; font-weight:800; color:#0f172a;">Halo, {{ $user->name }}</div>
+                    <div style="font-size:0.82rem; color:#64748b; margin-top:3px; font-weight:500;">Antrean pesanan dapur — auto-update setiap 5 detik</div>
                 </div>
                 <div class="polling-badge">
                     <span class="pulse-dot"></span>
@@ -570,32 +573,76 @@
                 </div>
             </div>
 
+            {{-- ── STATISTIK HARIAN OPERASIONAL ── --}}
+            <div id="adminDailyStats" style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:16px;">
+                <div class="kpi-card" style="border-left:3px solid var(--primary);">
+                    <div class="kpi-label">TRANSAKSI LUNAS</div>
+                    <div id="adTransaksi" class="kpi-val" style="font-size:1.3rem; color:var(--primary);">—</div>
+                    <div id="adTransaksiSub" style="font-size:0.72rem; color:#64748b; margin-top:3px;"></div>
+                </div>
+                <div class="kpi-card" style="border-left:3px solid #9b641c;">
+                    <div class="kpi-label">RATA-RATA TRANSAKSI</div>
+                    <div id="adRataRata" class="kpi-val" style="font-size:1.1rem; color:#9b641c;">—</div>
+                    <div style="font-size:0.72rem; color:#64748b; margin-top:3px;">per transaksi lunas</div>
+                </div>
+                <div class="kpi-card" style="border-left:3px solid #ad3e39;">
+                    <div class="kpi-label">TINGKAT PEMBATALAN</div>
+                    <div id="adCancel" class="kpi-val" style="font-size:1.3rem; color:#ad3e39;">—%</div>
+                    <div id="adCancelSub" style="font-size:0.72rem; color:#64748b; margin-top:3px;"></div>
+                </div>
+                <div class="kpi-card" style="border-left:3px solid #64748b;">
+                    <div class="kpi-label">JAM TERSIBUK</div>
+                    <div id="adPeak" class="kpi-val" style="font-size:1rem; color:#0f172a;">—</div>
+                    <div id="adPeakSub" style="font-size:0.72rem; color:#64748b; margin-top:3px;"></div>
+                </div>
+                <div class="kpi-card" style="border-left:3px solid #b45309;">
+                    <div class="kpi-label">BELUM LUNAS</div>
+                    <div id="adUnpaid" class="kpi-val" style="font-size:1.3rem; color:#b45309;">—</div>
+                    <div id="adUnpaidSub" style="font-size:0.72rem; color:#64748b; margin-top:3px;"></div>
+                </div>
+                <div class="kpi-card" style="border-left:3px solid #15803d; grid-row:span 1;">
+                    <div class="kpi-label">MENU TERLARIS HARI INI</div>
+                    <div id="adTopMenu" style="font-size:0.82rem; color:#0f172a; margin-top:4px; font-weight:700;">—</div>
+                    <div id="adTopMenuSub" style="font-size:0.72rem; color:#64748b; margin-top:2px;"></div>
+                </div>
+            </div>
+
             <div class="card p-3 mb-4" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
                 <div style="display:flex; align-items:center; gap:10px; min-width:0;">
-                    <span style="font-size:1.4rem;">📲</span>
+                    <div style="width:34px;height:34px;border-radius:9px;background:#e8f0e9;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#25382d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                    </div>
                     <div style="min-width:0;">
-                        <div style="font-weight:800; font-size:0.95rem; color:#0f172a;">Notifikasi &amp; Aplikasi</div>
+                        <div style="font-weight:700; font-size:0.9rem; color:#0f172a;">Notifikasi &amp; Aplikasi</div>
                         <div id="pushStatusText" style="font-size:0.78rem; color:#64748b; margin-top:2px;">Memuat status…</div>
                     </div>
                 </div>
                 <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                    <button type="button" id="btnInstallApp" class="btn btn-outline btn-sm" style="display:none;" onclick="installApp()">⬇️ Pasang Aplikasi</button>
-                    <button type="button" id="btnTestPush" class="btn btn-outline btn-sm" style="display:none;" onclick="sendTestPush()">📨 Tes Notifikasi</button>
-                    <button type="button" id="btnTogglePush" class="btn btn-primary btn-sm" onclick="togglePush()">🔔 Aktifkan Notifikasi</button>
+                    <button type="button" id="btnInstallApp" class="btn btn-outline btn-sm" style="display:none;" onclick="installApp()">Pasang Aplikasi</button>
+                    <button type="button" id="btnTestPush" class="btn btn-outline btn-sm" style="display:none;" onclick="sendTestPush()">Tes Notifikasi</button>
+                    <button type="button" id="btnTogglePush" class="btn btn-primary btn-sm" onclick="togglePush()">Aktifkan Notifikasi</button>
                 </div>
             </div>
 
             <div class="orders-section-header">
-                <h3 style="font-size:1.15rem; font-weight:800; color:#0f172a;">Antrean Pesanan Real-time</h3>
+                <h3 style="font-size:1.1rem; font-weight:800; color:#0f172a;">Antrean Pesanan Real-time</h3>
                 <div class="order-filter-chips">
                     <button type="button" class="filter-chip active" data-status="all" onclick="filterOrderStatus('all')">Semua</button>
-                    <button type="button" class="filter-chip" data-status="pending" onclick="filterOrderStatus('pending')">⏳ Menunggu</button>
-                    <button type="button" class="filter-chip" data-status="cooking" onclick="filterOrderStatus('cooking')">🔥 Dimasak</button>
+                    <button type="button" class="filter-chip" data-status="pending" onclick="filterOrderStatus('pending')" style="display:flex;align-items:center;gap:5px;">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        Menunggu
+                    </button>
+                    <button type="button" class="filter-chip" data-status="cooking" onclick="filterOrderStatus('cooking')" style="display:flex;align-items:center;gap:5px;">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 1 7 7c0 5-7 13-7 13S5 14 5 9a7 7 0 0 1 7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+                        Dimasak
+                    </button>
                 </div>
             </div>
 
             <div class="order-search">
-                <span class="order-search-icon" aria-hidden="true">🔍</span>
+                <span class="order-search-icon" aria-hidden="true">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                </span>
                 <input type="search" id="orderSearch" class="form-control" autocomplete="off"
                        placeholder="Cari no. meja, invoice, nama pembeli, atau menu…"
                        aria-label="Cari pesanan" oninput="searchOrders(this.value)">
@@ -610,7 +657,7 @@
                     <div class="modal-sheet-handle"></div>
                     <div class="modal-header">
                         <div>
-                            <h3 id="cashModalTitle" style="font-size:1.15rem; font-weight:800; color:#0f172a;">💵 Terima Bayar Tunai</h3>
+                            <h3 id="cashModalTitle" style="font-size:1.15rem; font-weight:800; color:#0f172a;">Terima Pembayaran</h3>
                             <p id="cashModalInvoice" style="font-size:0.75rem; color:#64748b; margin-top:2px;"></p>
                         </div>
                         <button type="button" class="btn btn-outline modal-close-btn" onclick="closeCashModal()" aria-label="Tutup">&times;</button>
@@ -627,7 +674,7 @@
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-outline" onclick="closeCashModal()">Batal</button>
-                            <button type="submit" id="btnCashSubmit" class="btn btn-success" disabled>✅ Konfirmasi Lunas</button>
+                            <button type="submit" id="btnCashSubmit" class="btn btn-success" disabled>Konfirmasi Lunas</button>
                         </div>
                     </form>
                 </div>
@@ -639,7 +686,7 @@
                     <div class="modal-sheet-handle"></div>
                     <div class="modal-header">
                         <div>
-                            <h3 id="discountModalTitle" style="font-size:1.15rem; font-weight:800; color:#0f172a;">🏷️ Potongan Harga</h3>
+                            <h3 id="discountModalTitle" style="font-size:1.15rem; font-weight:800; color:#0f172a;">Potongan Harga</h3>
                             <p id="discountModalInvoice" style="font-size:0.75rem; color:#64748b; margin-top:2px;"></p>
                         </div>
                         <button type="button" class="btn btn-outline modal-close-btn" onclick="closeDiscountModal()" aria-label="Tutup">&times;</button>
@@ -649,8 +696,8 @@
                             <div class="cash-total-row"><span>Total Belanja</span><strong id="discountSubtotal">Rp 0</strong></div>
                             <div id="discountCurrent" class="discount-current" style="display:none;"></div>
                             <div class="toggle-service" style="margin-bottom:14px;">
-                                <div class="toggle-btn active" id="btnDiscountManual" onclick="setDiscountMode('manual')">💵 Nominal Manual</div>
-                                <div class="toggle-btn" id="btnDiscountPromo" onclick="setDiscountMode('promo')">🏷️ Kupon Promo</div>
+                                <div class="toggle-btn active" id="btnDiscountManual" onclick="setDiscountMode('manual')">Nominal Manual</div>
+                                <div class="toggle-btn" id="btnDiscountPromo" onclick="setDiscountMode('promo')">Kupon Promo</div>
                             </div>
                             <div id="discountManualFields">
                                 <div class="form-group">
@@ -675,7 +722,7 @@
                         <div class="modal-footer">
                             <button type="button" id="btnDiscountRemove" class="btn btn-outline-danger" style="display:none;" onclick="removeDiscount()">Hapus Diskon</button>
                             <button type="button" class="btn btn-outline" onclick="closeDiscountModal()">Batal</button>
-                            <button type="submit" id="btnDiscountSubmit" class="btn btn-primary" disabled>✅ Pasang Diskon</button>
+                            <button type="submit" id="btnDiscountSubmit" class="btn btn-primary" disabled>Pasang Diskon</button>
                         </div>
                     </form>
                 </div>
@@ -687,7 +734,7 @@
                     <div class="modal-sheet-handle"></div>
                     <div class="modal-header">
                         <div>
-                            <h3 id="voidModalTitle" style="font-size:1.15rem; font-weight:800; color:#b91c1c;">🚫 Batalkan Pesanan</h3>
+                            <h3 id="voidModalTitle" style="font-size:1.15rem; font-weight:800; color:#b91c1c;">Batalkan Pesanan</h3>
                             <p id="voidModalInvoice" style="font-size:0.75rem; color:#64748b; margin-top:2px;"></p>
                         </div>
                         <button type="button" class="btn btn-outline modal-close-btn" onclick="closeVoidModal()" aria-label="Tutup">&times;</button>
@@ -699,7 +746,9 @@
                                 <ul id="voidItemList" class="void-item-list"></ul>
                                 <div class="cash-total-row" style="margin-top:8px;"><span>Total Tagihan</span><strong id="voidTotal">Rp 0</strong></div>
                             </div>
-                            <div id="voidPaidWarning" class="void-paid-warning" style="display:none;">⚠️ Pesanan ini <strong>sudah lunas</strong>. Kembalikan uang pelanggan setelah pembatalan.</div>
+                            <div id="voidPaidWarning" class="void-paid-warning" style="display:none;">
+                                <strong>Perhatian:</strong> Pesanan ini sudah lunas. Kembalikan uang pelanggan setelah pembatalan.
+                            </div>
                             <div class="form-group">
                                 <label class="form-label" for="voidReason">Alasan Pembatalan</label>
                                 <div class="void-reason-chips">
@@ -714,7 +763,7 @@
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-outline" onclick="closeVoidModal()">Kembali</button>
-                            <button type="submit" id="btnVoidSubmit" class="btn btn-danger" disabled>🚫 Batalkan Pesanan</button>
+                            <button type="submit" id="btnVoidSubmit" class="btn btn-danger" disabled>Batalkan Pesanan</button>
                         </div>
                     </form>
                 </div>
@@ -729,12 +778,68 @@
     <script src="{{ asset_versioned('assets/js/owner.js') }}"></script>
     <script>
         const pushConfigUrl = @js(route('owner.push.show'));
+        const adminDailyUrl = @js(route('owner.reports.daily'));
         let pushState = { enabled: false, public_key: null, subscribed: false };
 
         document.addEventListener('DOMContentLoaded', () => {
             initOwnerPolling(@js($ownerTypes), @js($startWorkingLabel));
             initPwaControls();
+            loadAdminDailyStats();
+            setInterval(() => { if (document.visibilityState === 'visible') loadAdminDailyStats(); }, 60000);
         });
+
+        const fmtRp = n => new Intl.NumberFormat('id-ID', { style:'currency', currency:'IDR', minimumFractionDigits:0 }).format(n);
+        const fmtShortRp = n => {
+            if (n >= 1_000_000) return 'Rp ' + (n/1_000_000).toFixed(1).replace('.0','') + ' jt';
+            if (n >= 1_000)    return 'Rp ' + Math.round(n/1_000) + ' rb';
+            return fmtRp(n);
+        };
+
+        async function loadAdminDailyStats() {
+            try {
+                const res  = await fetch(adminDailyUrl);
+                const data = await res.json();
+                if (!data.success) return;
+                const d = data.data;
+
+                // Transaksi lunas
+                document.getElementById('adTransaksi').textContent = d.total_orders;
+                const diff = d.total_orders - d.yesterday_orders;
+                document.getElementById('adTransaksiSub').textContent =
+                    diff > 0 ? `+${diff} vs kemarin` : diff < 0 ? `${diff} vs kemarin` : 'Sama dengan kemarin';
+
+                // Rata-rata
+                document.getElementById('adRataRata').textContent = fmtShortRp(d.avg_order_value);
+
+                // Pembatalan
+                document.getElementById('adCancel').textContent = d.cancel_rate + '%';
+                document.getElementById('adCancelSub').textContent = d.canceled_count + ' pesanan dibatalkan';
+
+                // Jam tersibuk
+                if (d.peak_hour !== null) {
+                    const h = d.peak_hour;
+                    document.getElementById('adPeak').textContent =
+                        String(h).padStart(2,'0') + ':00 – ' + String(h+1).padStart(2,'0') + ':00';
+                    document.getElementById('adPeakSub').textContent = d.peak_hour_count + ' pesanan masuk';
+                } else {
+                    document.getElementById('adPeak').textContent = 'Belum ada data';
+                }
+
+                // Belum lunas
+                const unpaid = d.unpaid_today ?? 0;
+                document.getElementById('adUnpaid').textContent = unpaid + ' transaksi';
+                document.getElementById('adUnpaidSub').textContent = unpaid > 0 ? 'Perlu dikonfirmasi kasir' : 'Semua sudah lunas';
+
+                // Top menu
+                if (d.top_menus && d.top_menus.length) {
+                    const top = d.top_menus[0];
+                    document.getElementById('adTopMenu').textContent = top.product_name;
+                    document.getElementById('adTopMenuSub').textContent = top.qty_sold + ' porsi terjual';
+                } else {
+                    document.getElementById('adTopMenu').textContent = 'Belum ada transaksi';
+                }
+            } catch (e) { console.error('admin daily stats:', e); }
+        }
 
         async function initPwaControls() {
             const statusEl  = document.getElementById('pushStatusText');

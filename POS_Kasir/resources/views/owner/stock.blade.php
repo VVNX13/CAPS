@@ -212,7 +212,14 @@
         <div class="stk-page-header">
             <div>
                 <div class="stk-page-title">Stok Produk</div>
-                <div class="stk-page-sub">{{ $scopeLabel }} &mdash; Tampilan hanya-lihat. Hubungi admin untuk perubahan stok.</div>
+                <div class="stk-page-sub">
+                    {{ $scopeLabel }} &mdash;
+                    @if ($isAdmin)
+                        Kasir dapat menambah stok produk.
+                    @else
+                        Tampilan hanya-lihat. Hubungi admin untuk perubahan stok.
+                    @endif
+                </div>
             </div>
             <div class="stk-toolbar">
                 <div class="stk-search-wrap">
@@ -275,23 +282,52 @@
                         <th style="text-align:center; width:90px;">Stok</th>
                         <th style="text-align:center;">Kondisi</th>
                         <th style="text-align:center;">Status</th>
+                        @if ($isAdmin)
+                            <th style="text-align:center; width:100px;">Aksi</th>
+                        @endif
                     </tr>
                 </thead>
                 <tbody id="stockBody">
-                    <tr><td colspan="6" style="text-align:center;padding:36px;color:#94a3b8;font-size:0.82rem;">Memuat data stok…</td></tr>
+                    <tr><td colspan="{{ $isAdmin ? 7 : 6 }}" style="text-align:center;padding:36px;color:#94a3b8;font-size:0.82rem;">Memuat data stok…</td></tr>
                 </tbody>
             </table>
         </div>
 
     </main>
+
+    {{-- Modal Tambah Stok (Admin only) --}}
+    @if ($isAdmin)
+    <div id="addStockModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:1000; align-items:center; justify-content:center;">
+        <div style="background:#fff; border-radius:16px; padding:28px 24px; width:100%; max-width:360px; margin:16px; box-shadow:0 20px 60px rgba(0,0,0,.2);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <div style="font-size:1rem; font-weight:800; color:#0f172a;">Tambah Stok</div>
+                <button onclick="closeAddStockModal()" style="background:none;border:none;cursor:pointer;font-size:1.3rem;color:#94a3b8;">&times;</button>
+            </div>
+            <div id="addStockProductName" style="font-weight:700; color:#0f172a; margin-bottom:4px;"></div>
+            <div id="addStockCurrent" style="font-size:0.8rem; color:#64748b; margin-bottom:16px;"></div>
+            <label style="display:block; font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:#64748b; margin-bottom:6px;">Jumlah Ditambahkan</label>
+            <input type="number" id="addStockQty" min="1" max="9999" value="10"
+                   style="width:100%; padding:10px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:1rem; font-weight:700; color:#0f172a; outline:none; margin-bottom:16px;"
+                   onfocus="this.style.borderColor='#25382d'" onblur="this.style.borderColor='#e2e8f0'">
+            <div style="display:flex; gap:8px;">
+                <button onclick="closeAddStockModal()" style="flex:1; padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; background:#fff; font-weight:600; cursor:pointer;">Batal</button>
+                <button onclick="submitAddStock()" id="btnAddStockSubmit" style="flex:2; padding:10px; background:#25382d; color:#fff; border:none; border-radius:8px; font-weight:700; cursor:pointer;">Simpan</button>
+            </div>
+        </div>
+    </div>
+    @endif
 @endsection
 
 @push('scripts')
 <script>
-    const stockListUrl = @js(route('owner.products.stock'));
-    let allProducts = [];
-    let currentFilter = 'all';
-    let currentSearch = '';
+    const stockListUrl  = @js(route('owner.products.stock'));
+    const addStockBase  = @js(url('/api/owner/products'));
+    const isAdmin       = @js($isAdmin);
+    const colCount      = isAdmin ? 7 : 6;
+    let allProducts     = [];
+    let currentFilter   = 'all';
+    let currentSearch   = '';
+    let addStockTarget  = null;
 
     document.addEventListener('DOMContentLoaded', () => loadStock());
 
@@ -341,7 +377,7 @@
 
         const tbody = document.getElementById('stockBody');
         if (!products.length) {
-            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:36px;color:#94a3b8;font-size:0.82rem;">Tidak ada produk ditemukan.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="${colCount}" style="text-align:center;padding:36px;color:#94a3b8;font-size:0.82rem;">Tidak ada produk ditemukan.</td></tr>`;
             return;
         }
 
@@ -362,13 +398,25 @@
 
             const rowBg = p.stock <= 0 ? 'background:#fffafa;' : p.stock <= 5 ? 'background:#fffdf5;' : '';
 
+            const actionCell = isAdmin ? `
+                <td style="text-align:center;">
+                    <button onclick="openAddStockModal(${p.id})" style="
+                        padding:4px 12px; border:1.5px solid #25382d; border-radius:7px;
+                        background:#fff; color:#25382d; font-size:0.76rem; font-weight:700;
+                        cursor:pointer; transition:all .15s;
+                    " onmouseover="this.style.background='#25382d';this.style.color='#fff'"
+                       onmouseout="this.style.background='#fff';this.style.color='#25382d'">
+                        + Stok
+                    </button>
+                </td>` : '';
+
             html += `
                 <tr style="${rowBg}">
                     <td style="text-align:center;color:#94a3b8;font-size:0.78rem;">${i + 1}</td>
                     <td style="font-weight:700;">${p.name}</td>
                     <td style="text-align:right;font-weight:600;">${fmt(p.price)}</td>
                     <td style="text-align:center;">
-                        <span style="font-size:1.25rem;font-weight:900;color:${p.stock <= 0 ? '#b91c1c' : p.stock <= 5 ? '#b45309' : '#15803d'};">${p.stock}</span>
+                        <span id="stockVal_${p.id}" style="font-size:1.25rem;font-weight:900;color:${p.stock <= 0 ? '#b91c1c' : p.stock <= 5 ? '#b45309' : '#15803d'};">${p.stock}</span>
                         <div style="font-size:0.65rem;color:#94a3b8;margin-top:1px;">porsi</div>
                     </td>
                     <td style="text-align:center;">
@@ -377,9 +425,68 @@
                         </span>
                     </td>
                     <td style="text-align:center;">${activeBadge}</td>
+                    ${actionCell}
                 </tr>`;
         });
         tbody.innerHTML = html;
     }
+
+    // ── Add Stock Modal ──
+    function openAddStockModal(productId) {
+        const p = allProducts.find(x => x.id === productId);
+        if (!p) return;
+        addStockTarget = p;
+        document.getElementById('addStockProductName').textContent = p.name;
+        document.getElementById('addStockCurrent').textContent = 'Stok saat ini: ' + p.stock + ' porsi';
+        document.getElementById('addStockQty').value = 10;
+        const modal = document.getElementById('addStockModal');
+        modal.style.display = 'flex';
+        setTimeout(() => document.getElementById('addStockQty').focus(), 100);
+    }
+
+    function closeAddStockModal() {
+        document.getElementById('addStockModal').style.display = 'none';
+        addStockTarget = null;
+    }
+
+    async function submitAddStock() {
+        if (!addStockTarget) return;
+        const qty = parseInt(document.getElementById('addStockQty').value);
+        if (!qty || qty < 1) { alert('Masukkan jumlah yang valid (minimal 1)'); return; }
+
+        const btn = document.getElementById('btnAddStockSubmit');
+        btn.disabled = true;
+        btn.textContent = 'Menyimpan…';
+
+        try {
+            const res = await fetch(`${addStockBase}/${addStockTarget.id}/addstock`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ qty }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                // Update local data
+                const p = allProducts.find(x => x.id === addStockTarget.id);
+                if (p) p.stock = data.data.stock;
+                closeAddStockModal();
+                updateSummary();
+                renderTable();
+            } else {
+                alert('Gagal: ' + (data.message || 'tidak diketahui'));
+            }
+        } catch (e) {
+            alert('Gagal: ' + e.message);
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Simpan';
+        }
+    }
+
+    // Close modal on backdrop click
+    document.addEventListener('click', e => {
+        const modal = document.getElementById('addStockModal');
+        if (modal && e.target === modal) closeAddStockModal();
+    });
 </script>
 @endpush

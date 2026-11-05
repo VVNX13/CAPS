@@ -55,9 +55,12 @@ function initOwnerPolling(ownerTypes, workingLabel) {
   // Setup sound switch button
   const soundBtn = document.getElementById('btnToggleSound');
   if (soundBtn) {
+    const svgOn  = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg> Audio`;
+    const svgOff = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg> Mute`;
+    soundBtn.innerHTML = svgOn;
     soundBtn.addEventListener('click', () => {
       soundEnabled = !soundEnabled;
-      soundBtn.innerHTML = soundEnabled ? '🔔 Audio: On' : '🔕 Audio: Mute';
+      soundBtn.innerHTML = soundEnabled ? svgOn : svgOff;
       soundBtn.classList.toggle('btn-primary', soundEnabled);
       soundBtn.classList.toggle('btn-outline', !soundEnabled);
       if (soundEnabled) playBeepSound();
@@ -160,15 +163,60 @@ function renderOrderCards(orders) {
   const container = document.getElementById('ordersContainer');
   if (!container) return;
 
-  const byStatus = (activeOrderFilter === 'all')
-    ? (orders || [])
-    : (orders || []).filter(o => o.item_status === activeOrderFilter);
-  const filtered = byStatus.filter(matchesOrderSearch);
+  // --- Step 1: Group semua items berdasarkan sale_id ---
+  const allItems = orders || [];
+  const salesMap = new Map();
+  allItems.forEach(item => {
+    if (!salesMap.has(item.sale_id)) {
+      salesMap.set(item.sale_id, {
+        sale_id: item.sale_id,
+        invoice_number: item.invoice_number,
+        customer_name: item.customer_name,
+        customer_phone: item.customer_phone,
+        service_type: item.service_type,
+        table_number: item.table_number,
+        payment_method: item.payment_method,
+        payment_status: item.payment_status,
+        discount_amount: item.discount_amount,
+        discount_note: item.discount_note,
+        total_amount: item.total_amount,
+        notes: item.notes,
+        items: []
+      });
+    }
+    salesMap.get(item.sale_id).items.push(item);
+  });
+
+  // --- Step 2: Determine overall status per sale ---
+  const getOverallStatus = (sale) => {
+    const hasP = sale.items.some(i => i.item_status === 'pending');
+    const hasC = sale.items.some(i => i.item_status === 'cooking');
+    return hasP ? 'pending' : hasC ? 'cooking' : 'done';
+  };
+
+  let sales = [...salesMap.values()];
+  if (activeOrderFilter !== 'all') {
+    sales = sales.filter(sale => sale.items.some(i => i.item_status === activeOrderFilter));
+  }
+
+  // --- Step 3: Filter by search ---
+  if (orderSearchQuery) {
+    sales = sales.filter(sale => {
+      const haystack = [
+        sale.table_number ? `meja ${sale.table_number}` : '',
+        sale.invoice_number,
+        sale.customer_name,
+        sale.customer_phone,
+        ...sale.items.map(i => i.product_name)
+      ].join(' ').toLowerCase();
+      return orderSearchQuery.split(/\s+/).every(word => haystack.includes(word));
+    });
+  }
 
   const countEl = document.getElementById('orderSearchCount');
-  if (countEl) countEl.textContent = orderSearchQuery ? `${filtered.length} hasil` : '';
+  if (countEl) countEl.textContent = orderSearchQuery ? `${sales.length} hasil` : '';
 
-  if (filtered.length === 0) {
+  if (sales.length === 0) {
     const title = orderSearchQuery
       ? `Tidak ada pesanan yang cocok dengan "${escapeHtml(orderSearchQuery)}"`
       : `Tidak ada antrean pesanan ${activeOrderFilter !== 'all' ? '(' + activeOrderFilter + ')' : 'aktif'}`;
@@ -176,83 +224,130 @@ function renderOrderCards(orders) {
       ? 'Coba kata kunci lain, atau hapus pencarian untuk melihat semua antrean.'
       : 'Pesanan pelanggan yang masuk akan otomatis muncul di sini.';
 
+    const emptyIcon = orderSearchQuery
+      ? `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`
+      : `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1" ry="1"/></svg>`;
+
     container.innerHTML = `
-      <div style="text-align:center; padding:40px 20px; background:#fff; border-radius:16px; border:1px dashed #cbd5e1; grid-column:1/-1;">
-        <div style="font-size:2.5rem; margin-bottom:8px;">${orderSearchQuery ? '🔍' : '🍽️'}</div>
-        <h3 style="color:#64748b; font-size:1.1rem; font-weight:700;">${title}</h3>
-        <p style="color:#94a3b8; font-size:0.85rem; margin-top:2px;">${hint}</p>
+      <div style="text-align:center; padding:48px 20px; background:#fff; border-radius:16px; border:1px dashed #cbd5e1; grid-column:1/-1;">
+        <div style="width:52px;height:52px;border-radius:14px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;">
+          ${emptyIcon}
+        </div>
+        <h3 style="color:#64748b; font-size:1rem; font-weight:700; margin-bottom:4px;">${title}</h3>
+        <p style="color:#94a3b8; font-size:0.82rem; margin-top:0;">${hint}</p>
       </div>
     `;
     return;
   }
 
-  let html = '';
-  filtered.forEach(order => {
-    const isDineIn = order.service_type === 'dine_in';
-    const statusBadge = {
-      'pending': '<span class="brand-badge" style="background:#fee2e2; color:#ef4444;">⏳ Menunggu</span>',
-      'cooking': '<span class="brand-badge" style="background:#fef3c7; color:#d97706;">🔥 Dimasak</span>',
-      'done': '<span class="brand-badge" style="background:#d1fae5; color:#059669;">✅ Selesai</span>'
-    }[order.item_status];
+  // --- Step 4: Render satu card per sale ---
+  // SVG icons reused across cards
+  const iconDineIn   = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6h3l-1 11h3l-1-11h1z"/></svg>`;
+  const iconTakeaway = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>`;
+  const iconNote     = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="11" y2="17"/></svg>`;
+  const iconPrint    = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>`;
+  const iconVoid     = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`;
+  const iconDiscount = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>`;
+  const iconCash     = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>`;
+  const iconCheck    = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
 
-    const paymentBadge = order.payment_status === 'paid' 
-      ? '<span class="brand-badge" style="background:#d1fae5; color:#059669;">LUNAS (' + order.payment_method.toUpperCase() + ')</span>'
-      : '<span class="brand-badge" style="background:#fee2e2; color:#dc2626;">BELUM BAYAR</span>';
+  let html = '';
+  sales.forEach(sale => {
+    const overallStatus = getOverallStatus(sale);
+    const isDineIn = sale.service_type === 'dine_in';
+
+    const statusColors = {
+      pending: { bg: '#fff4e6', color: '#c05c00', label: 'Menunggu' },
+      cooking: { bg: '#fef3c7', color: '#d97706', label: 'Dimasak'  },
+      done:    { bg: '#e6f4ea', color: '#1e7e34', label: 'Selesai'  },
+    };
+    const sc = statusColors[overallStatus] || statusColors.done;
+    const statusBadge = `<span class="brand-badge" style="background:${sc.bg}; color:${sc.color};">${sc.label}</span>`;
+    const paymentBadge = sale.payment_status === 'paid'
+      ? `<span class="brand-badge" style="background:#e6f4ea; color:#1e7e34;">Lunas · ${(sale.payment_method || '').toUpperCase()}</span>`
+      : `<span class="brand-badge" style="background:#fff0f0; color:#c0392b;">Belum Bayar</span>`;
+
+    // Per-item rows
+    const itemsHtml = sale.items.map(item => {
+      const isc = statusColors[item.item_status] || statusColors.done;
+      const itemBadge = `<span style="font-size:0.65rem; background:${isc.bg}; color:${isc.color}; padding:1px 7px; border-radius:99px; font-weight:700;">${isc.label}</span>`;
+
+      return `
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; padding:10px 12px; background:#f8fafc; border-radius:10px; margin-bottom:6px; gap:10px;">
+          <div style="flex:1; min-width:0;">
+            <div style="font-weight:700; font-size:0.92rem; color:#0f172a; margin-bottom:3px;">${escapeHtml(item.product_name)}</div>
+            <div style="display:flex; flex-wrap:wrap; align-items:center; gap:5px;">
+              <span style="font-size:0.8rem; color:#64748b; font-weight:600;">${item.quantity}×</span>
+              ${item.category_name ? `<span class="brand-badge ${item.owner_type === 'minuman' ? 'badge-drink' : 'badge-food'}" style="font-size:0.62rem; padding:1px 5px;">${escapeHtml(item.category_name)}</span>` : ''}
+              ${itemBadge}
+            </div>
+            ${item.item_notes ? `<div class="order-item-note" style="margin-top:4px; display:flex; align-items:center; gap:4px;">${iconNote} <span>${escapeHtml(item.item_notes)}</span></div>` : ''}
+          </div>
+          <div style="text-align:right; flex-shrink:0;">
+            <div style="font-weight:800; color:#0f172a; font-size:0.88rem;">${formatRupiah(item.subtotal)}</div>
+            ${item.item_status === 'cooking' ? `
+              <button onclick="updateStatus(${item.item_id}, 'done')" class="btn btn-success btn-sm" style="margin-top:5px; font-size:0.72rem; padding:3px 9px; display:flex; align-items:center; gap:4px;">
+                ${iconCheck} Selesai
+              </button>
+            ` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
 
     html += `
-      <div class="order-card" id="card-item-${order.item_id}">
-        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
+      <div class="order-card" id="card-sale-${sale.sale_id}">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
           <div>
-            <div style="font-weight:800; font-size:1.1rem; color:#1e293b;">
-              ${isDineIn ? '🍽️ Makan di Tempat' : '🛍️ Takeaway / Bungkus'}
-              ${order.table_number ? `<span class="brand-badge" style="margin-left:4px;">Meja ${escapeHtml(order.table_number)}</span>` : ''}
+            <div style="display:flex; align-items:center; gap:7px; font-weight:800; font-size:1rem; color:#1e293b;">
+              <span style="display:flex; align-items:center; justify-content:center; width:26px; height:26px; border-radius:7px; background:#f1f5f9; color:#64748b;">
+                ${isDineIn ? iconDineIn : iconTakeaway}
+              </span>
+              ${isDineIn ? 'Makan di Tempat' : 'Takeaway / Bungkus'}
+              ${sale.table_number ? `<span class="brand-badge" style="font-weight:700;">Meja ${escapeHtml(sale.table_number)}</span>` : ''}
             </div>
-            <div style="font-size:0.78rem; color:#64748b; margin-top:2px;">
-              Inv: <strong>${escapeHtml(order.invoice_number)}</strong> &bull; ${escapeHtml(order.customer_name)}
+            <div style="font-size:0.76rem; color:#64748b; margin-top:4px; letter-spacing:0.01em;">
+              <span style="font-weight:600; color:#334155;">${escapeHtml(sale.invoice_number)}</span>
+              &ensp;·&ensp;${escapeHtml(sale.customer_name || '-')}
             </div>
           </div>
-          <div>${statusBadge}</div>
-        </div>
-
-        <div style="display:flex; align-items:center; justify-content:space-between; padding:12px; background:#f8fafc; border-radius:10px; margin-bottom:12px;">
-          <div>
-            <div style="font-weight:700; font-size:1rem; color:#0f172a;">${escapeHtml(order.product_name)}</div>
-            <div style="font-size:0.85rem; color:#64748b;">Jumlah: <strong style="color:#2563eb; font-size:1rem;">${order.quantity} porsi</strong></div>
-            ${order.category_name ? `<span class="brand-badge ${order.owner_type === 'minuman' ? 'badge-drink' : 'badge-food'}" style="font-size:0.65rem; padding:1px 6px;">${escapeHtml(order.category_name)}</span>` : ''}
-            ${order.item_notes ? `<div class="order-item-note"><span>📝</span> <span>${escapeHtml(order.item_notes)}</span></div>` : ''}
-          </div>
-          <div style="text-align:right;">
-            <div style="font-weight:800; color:#0f172a; font-size:0.95rem;">${formatRupiah(order.subtotal)}</div>
-            <div style="margin-top:2px;">${paymentBadge}</div>
+          <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px; flex-shrink:0;">
+            ${statusBadge}
+            ${paymentBadge}
           </div>
         </div>
 
-        ${Number(order.discount_amount) > 0 ? `<div class="order-discount-note">🏷️ ${escapeHtml(order.discount_note || 'Diskon')}: -${formatRupiah(order.discount_amount)} &bull; Tagihan ${formatRupiah(order.total_amount)}</div>` : ''}
+        <div style="margin-bottom:10px;">
+          ${itemsHtml}
+        </div>
 
-        ${order.notes ? `<div style="font-size:0.8rem; background:#fffbeb; padding:6px 10px; border-radius:8px; margin-bottom:12px; color:#b45309;">📝 Catatan Pesanan: ${escapeHtml(order.notes)}</div>` : ''}
+        ${Number(sale.discount_amount) > 0 ? `
+          <div class="order-discount-note" style="display:flex; align-items:center; gap:5px;">
+            ${iconDiscount}
+            ${escapeHtml(sale.discount_note || 'Diskon')}: &minus;${formatRupiah(sale.discount_amount)}
+            &ensp;·&ensp; Total Tagihan <strong>${formatRupiah(sale.total_amount)}</strong>
+          </div>` : ''}
 
-        <div style="display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;">
-          <a class="btn btn-outline btn-sm" href="/receipt/${encodeURIComponent(order.invoice_number)}?print=1"
-             target="_blank" rel="noopener" title="Cetak struk thermal">🖨️ Struk</a>
-          <button class="btn btn-outline-danger btn-sm" onclick="openVoidModal(${order.sale_id})" title="Batalkan seluruh pesanan">
-            🚫 Batalkan
+        ${sale.notes ? `
+          <div style="font-size:0.8rem; background:#fffbeb; padding:7px 10px; border-radius:8px; margin-bottom:10px; color:#92400e; display:flex; align-items:flex-start; gap:5px;">
+            ${iconNote}
+            <span>Catatan: ${escapeHtml(sale.notes)}</span>
+          </div>` : ''}
+
+        <div style="display:flex; gap:7px; justify-content:flex-end; flex-wrap:wrap; padding-top:10px; border-top:1px solid #f1f5f9; margin-top:4px;">
+          <a class="btn btn-outline btn-sm" href="/receipt/${encodeURIComponent(sale.invoice_number)}?print=1"
+             target="_blank" rel="noopener" title="Cetak struk" style="display:flex; align-items:center; gap:5px;">
+            ${iconPrint} Struk
+          </a>
+          <button class="btn btn-outline-danger btn-sm" onclick="openVoidModal(${sale.sale_id})" title="Batalkan seluruh pesanan" style="display:flex; align-items:center; gap:5px;">
+            ${iconVoid} Batalkan
           </button>
-          ${order.payment_status === 'unpaid' ? `
-            <button class="btn btn-outline btn-sm" onclick="openDiscountModal(${order.sale_id})" title="Potongan harga / kupon">
-              🏷️ Diskon
+          ${sale.payment_status === 'unpaid' ? `
+            <button class="btn btn-outline btn-sm" onclick="openDiscountModal(${sale.sale_id})" title="Potongan harga" style="display:flex; align-items:center; gap:5px;">
+              ${iconDiscount} Diskon
             </button>
-            <button class="btn btn-warning btn-sm" onclick="confirmPayment(${order.sale_id})">
-              💵 Terima Bayar Kasir
-            </button>
-          ` : ''}
-          ${order.item_status === 'pending' ? `
-            <button class="btn btn-primary btn-sm" onclick="updateStatus(${order.item_id}, 'cooking')">
-              ${order.owner_type === 'minuman' ? '🥤' : '👨‍🍳'} ${startWorkingLabel}
-            </button>
-          ` : ''}
-          ${order.item_status === 'cooking' ? `
-            <button class="btn btn-success btn-sm" onclick="updateStatus(${order.item_id}, 'done')">
-              ✅ Tandai Selesai
+            <button class="btn btn-warning btn-sm" onclick="confirmPayment(${sale.sale_id})" style="display:flex; align-items:center; gap:5px;">
+              ${iconCash} Terima Bayar
             </button>
           ` : ''}
         </div>

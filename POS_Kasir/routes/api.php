@@ -67,6 +67,7 @@ Route::middleware('web')->group(function () {
         Route::get('/owner/products/stock', [ProductController::class, 'stockList'])->name('owner.products.stock');
         Route::post('/owner/products', [ProductController::class, 'save'])->name('owner.products.save');
         Route::post('/owner/products/toggle', [ProductController::class, 'toggleActive'])->name('owner.products.toggle');
+        Route::post('/owner/products/{product}/addstock', [ProductController::class, 'addStock'])->name('owner.products.addstock');
         Route::delete('/owner/products/{product}', [ProductController::class, 'destroy'])->name('owner.products.destroy');
 
         Route::get('/owner/reports/data', [ReportController::class, 'getData'])->name('owner.reports.data');
