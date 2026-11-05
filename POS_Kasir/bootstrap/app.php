@@ -27,7 +27,8 @@ return Application::configure(basePath: dirname(__DIR__))
         // Shop-wide configuration (dynamic QRIS, QR stands, gateway credentials,
         // webhook secret) is admin only.
         $middleware->alias([
-            'admin' => \App\Http\Middleware\RequireAdmin::class,
+            'admin'   => \App\Http\Middleware\RequireAdmin::class,
+            'kitchen' => \App\Http\Middleware\RequireKitchen::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
