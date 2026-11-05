@@ -3,32 +3,42 @@
 @section('title', 'Kelola Menu ' . $scopeLabel . ' - ' . config('app.name'))
 
 @section('content')
-    @push('navbar-actions')
-        <button class="btn btn-primary btn-sm" onclick="openProductModal()">+ Tambah Menu</button>
-    @endpush
-
     @include('owner.partials.navbar', [
         'current' => 'products',
-        'title' => 'Menu ' . $scopeLabel,
-        'icon' => $scopeLabel === 'Makanan' ? '🍲' : ($scopeLabel === 'Minuman' ? '🍹' : '👨‍💼'),
+        'title'   => 'Kelola Menu',
     ])
 
     <main class="container">
-        <!-- Quick Action / Search Header -->
-        <div class="card p-3 mb-4" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-            <div style="font-weight:800; font-size:1.1rem; color:#0f172a;">
-                Daftar Menu &amp; Stok ({{ $scopeLabel }})
+        <!-- Page Header + Toolbar -->
+        <div class="stk-page-header" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:20px; padding-top:4px;">
+            <div>
+                <div style="font-size:1.3rem; font-weight:800; color:var(--text-main,#0f172a); letter-spacing:-0.02em;">Kelola Menu</div>
+                <div style="font-size:0.8rem; color:var(--text-muted,#64748b); margin-top:3px; font-weight:500;">{{ $scopeLabel }} — atur produk, stok harian &amp; visibilitas menu</div>
             </div>
-            <div style="display:flex; gap:8px; flex:1; max-width:360px; align-items:center;">
-                <input type="text" id="ownerProductSearch" class="form-control" placeholder="🔍 Cari menu..." oninput="filterOwnerProducts()">
-                <select id="stockFilter" class="form-select" style="max-width:150px;" onchange="filterOwnerProducts()">
-                    <option value="all">Semua</option>
-                    <option value="low">Stok ≤ 5</option>
+            <button class="btn btn-primary btn-sm" onclick="openProductModal()" style="display:flex; align-items:center; gap:7px; padding:8px 16px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Tambah Menu
+            </button>
+        </div>
+
+        <!-- Toolbar: Search + Filter -->
+        <div class="card p-3 mb-4" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <div style="font-weight:700; font-size:0.9rem; color:var(--text-muted,#64748b); letter-spacing:0.02em; text-transform:uppercase; font-size:0.72rem;">
+                Daftar Menu &amp; Stok — {{ $scopeLabel }}
+            </div>
+            <div style="display:flex; gap:8px; align-items:center;">
+                <div style="position:relative;">
+                    <svg style="position:absolute; left:10px; top:50%; transform:translateY(-50%); color:#94a3b8; pointer-events:none;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <input type="text" id="ownerProductSearch" class="form-control" placeholder="Cari nama menu..." oninput="filterOwnerProducts()" style="padding-left:34px; max-width:220px;">
+                </div>
+                <select id="stockFilter" class="form-select" style="max-width:140px;" onchange="filterOwnerProducts()">
+                    <option value="all">Semua Stok</option>
+                    <option value="low">Stok Kritis (≤5)</option>
                 </select>
             </div>
         </div>
 
-        <!-- Products Container: Responsive on Mobile & Desktop -->
+        <!-- Products Container -->
         <div id="productGridList" class="owner-products-grid"></div>
     </main>
 
@@ -80,8 +90,8 @@
 
                     <div style="display:flex; gap:14px; align-items:flex-start; margin-bottom:14px;">
                         <div id="photoPreviewBox"
-                             style="width:96px; height:96px; border-radius:12px; border:1px solid #e2e8f0; background:#f1f5f9; overflow:hidden; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:1.9rem;">
-                            <span id="photoPlaceholderEmoji">🍲</span>
+                             style="width:96px; height:96px; border-radius:12px; border:1px solid #e2e8f0; background:#f1f5f9; overflow:hidden; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
                         </div>
                         <div style="flex:1; min-width:0;">
                             <div id="photoCurrentNote" style="font-size:0.75rem; color:#94a3b8; margin-bottom:6px;"></div>
@@ -95,6 +105,24 @@
                         <label class="form-label" for="prod_image">Atau pakai URL Foto (opsional)</label>
                         <input type="url" id="prod_image" class="form-control" placeholder="https://..." oninput="syncPhotoPreview()">
                         <small class="form-hint">Kalau upload file di atas, URL ini diabaikan.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Status Menu</label>
+                        <div style="display:flex; gap:16px; margin-top:4px;">
+                            <label style="display:flex; align-items:center; gap:7px; cursor:pointer; font-size:0.9rem;">
+                                <input type="radio" name="prod_is_active" id="prod_active_yes" value="1" checked
+                                       style="width:auto; accent-color:#2f7a4d;">
+                                <span style="color:#2f7a4d; font-weight:600;">Aktif</span>
+                                <span style="color:#64748b; font-size:0.8rem;">(tampil ke pelanggan)</span>
+                            </label>
+                            <label style="display:flex; align-items:center; gap:7px; cursor:pointer; font-size:0.9rem;">
+                                <input type="radio" name="prod_is_active" id="prod_active_no" value="0"
+                                       style="width:auto; accent-color:#ad3e39;">
+                                <span style="color:#ad3e39; font-weight:600;">Nonaktif</span>
+                                <span style="color:#64748b; font-size:0.8rem;">(disembunyikan)</span>
+                            </label>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -134,7 +162,7 @@
 
             const toast = document.createElement('div');
             toast.className = 'toast';
-            toast.innerHTML = `<span>📦</span> <span>${escapeHtml(message)}</span>`;
+            toast.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="20 6 9 17 4 12"/></svg> <span>${escapeHtml(message)}</span>`;
             container.appendChild(toast);
 
             setTimeout(() => toast.remove(), 3500);
@@ -144,18 +172,21 @@
         // the customer will see instead of an unrelated stock photo.
         function productFallback(product) {
             const food = !product || product.owner_type !== 'minuman';
-            const emoji = food ? '🍲' : '🥤';
-            const bg = food ? 'linear-gradient(135deg,#fff7ed,#fed7aa)' : 'linear-gradient(135deg,#ecfeff,#a5f3fc)';
-
-            return `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:1.6rem;background:${bg};">${emoji}</div>`;
+            const bg   = food ? 'linear-gradient(135deg,#fff7ed,#fed7aa)' : 'linear-gradient(135deg,#ecfeff,#a5f3fc)';
+            const icon = food
+                ? `<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#c2410c" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2l1.5 10h15L21 2"/><path d="M5 12v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8"/><path d="M9 7h6"/></svg>`
+                : `<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#0369a1" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8h1a4 4 0 0 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V8z"/><line x1="6" y1="2" x2="6" y2="4"/><line x1="10" y1="2" x2="10" y2="4"/><line x1="14" y1="2" x2="14" y2="4"/></svg>`;
+            return `<div class="prod-cover-fallback" style="background:${bg};">${icon}</div>`;
         }
 
-        function productThumb(product) {
+        function productCover(product) {
             if (product && product.image_url) {
-                return `<img src="${escapeHtml(product.image_url)}" alt="${escapeHtml(product.name)}" class="owner-prod-thumb" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='flex';"><div class="owner-prod-thumb" style="display:none; overflow:hidden;">${productFallback(product)}</div>`;
+                return `<img src="${escapeHtml(product.image_url)}" alt="${escapeHtml(product.name)}"
+                             style="width:100%;height:100%;object-fit:cover;"
+                             onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='flex';">
+                        <div style="display:none;">${productFallback(product)}</div>`;
             }
-
-            return `<div class="owner-prod-thumb" style="overflow:hidden;">${productFallback(product)}</div>`;
+            return productFallback(product);
         }
 
         function updatePhotoPreview(src, note) {
@@ -167,7 +198,10 @@
                 box.innerHTML = `<img src="${escapeHtml(src)}" style="width:100%;height:100%;object-fit:cover;" alt="preview">`;
             } else {
                 const food = !currentProduct || currentProduct.owner_type !== 'minuman';
-                box.innerHTML = `<span>${food ? '🍲' : '🥤'}</span>`;
+                const icon = food
+                    ? `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#c2410c" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2l1.5 10h15L21 2"/><path d="M5 12v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8"/><path d="M9 7h6"/></svg>`
+                    : `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0369a1" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8h1a4 4 0 0 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V8z"/><line x1="6" y1="2" x2="6" y2="4"/><line x1="10" y1="2" x2="10" y2="4"/><line x1="14" y1="2" x2="14" y2="4"/></svg>`;
+                box.innerHTML = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#f8fafc;">${icon}</div>`;
             }
 
             if (noteEl) noteEl.textContent = note || '';
@@ -230,8 +264,6 @@
             const filter = document.getElementById('stockFilter')?.value || 'all';
             renderProducts(filter);
         }
-            renderProducts();
-        }
 
         function renderProducts(filter = 'all') {
             const container = document.getElementById('productGridList');
@@ -240,44 +272,77 @@
             const filtered = productsList.filter(p => !search || p.name.toLowerCase().includes(search) || p.category_name.toLowerCase().includes(search));
 
             if (filtered.length === 0) {
-                container.innerHTML = '<div style="text-align:center; padding:40px; background:#fff; border-radius:16px; border:1px dashed #cbd5e1; grid-column:1/-1;">Belum ada menu yang cocok.</div>';
+                container.innerHTML = `
+                    <div style="text-align:center; padding:48px 20px; background:#fff; border-radius:16px; border:1px dashed #cbd5e1; grid-column:1/-1;">
+                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 10px; display:block;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        <div style="font-size:0.9rem; font-weight:600; color:#94a3b8;">Belum ada menu yang cocok.</div>
+                    </div>`;
                 return;
             }
 
+            /* SVG icon helpers */
+            const icoCheck = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+            const icoOff   = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
+            const icoEdit  = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
+            const icoDel   = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>`;
+            const icoBox   = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>`;
+
             let html = '';
             filtered.forEach(p => {
-                html += `
-                    <div class="card owner-prod-card">
-                        <div style="display:flex; gap:12px; align-items:center;">
-                            ${productThumb(p)}
-                            <div style="flex:1; min-width:0;">
-                                <span class="brand-badge ${p.owner_type === 'minuman' ? 'badge-drink' : 'badge-food'}" style="font-size:0.7rem; padding:2px 6px;">
-                                    ${p.category_name}
-                                </span>
-                                <h4 style="font-weight:700; font-size:1rem; margin-top:2px; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${p.name}</h4>
-                                <div style="font-weight:800; color:var(--primary); font-size:1.05rem;">${formatRupiah(p.price)}</div>
-                            </div>
-                        </div>
+                const isActive   = p.is_active == 1;
+                const isFood     = p.owner_type !== 'minuman';
+                const stockLow   = p.stock <= 5;
+                const canDelete  = p.sold_count == 0;
 
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px; padding-top:12px; border-top:1px solid #f1f5f9;">
-                            <div style="font-size:0.85rem; color:#64748b;">
-                                Stok: <strong style="color:#0f172a;">${p.stock}</strong>
-                            </div>
-                            <div style="display:flex; gap:8px; align-items:center;">
-                                <button class="btn ${p.is_active == 1 ? 'btn-success' : 'btn-outline'} btn-sm" onclick="toggleActive(${p.id}, ${p.is_active == 1 ? 0 : 1})">
-                                    ${p.is_active == 1 ? '✅ Aktif' : 'Off'}
-                                </button>
-                                <button class="btn btn-primary btn-sm" onclick="editProduct(${p.id})">
-                                    ✏️ Edit
-                                </button>
-                                <button class="btn btn-danger btn-sm" onclick="deleteProduct(${p.id})"
-                                        title="${p.sold_count > 0 ? 'Sudah pernah terjual, tidak bisa dihapus' : 'Hapus menu ini'}">
-                                    🗑️
-                                </button>
-                            </div>
-                        </div>
+                html += `
+                <div class="card owner-prod-card">
+
+                    <!-- Status ribbon -->
+                    <div class="prod-status-ribbon ${isActive ? 'active' : 'inactive'}">
+                        ${isActive ? icoCheck : icoOff}
+                        ${isActive ? 'Aktif' : 'Nonaktif'}
                     </div>
-                `;
+
+                    <!-- Cover -->
+                    <div class="prod-cover">
+                        ${productCover(p)}
+                    </div>
+
+                    <!-- Body -->
+                    <div class="prod-body">
+                        <div class="prod-category-badge ${isFood ? 'food' : 'drink'}">
+                            ${p.category_name}
+                        </div>
+                        <div class="prod-name">${escapeHtml(p.name)}</div>
+                        <div class="prod-price">${formatRupiah(p.price)}</div>
+                    </div>
+
+                    <!-- Stock row -->
+                    <div class="prod-stock-row">
+                        ${icoBox}
+                        <span>Stok:</span>
+                        <span class="prod-stock-val ${stockLow ? 'low' : ''}">${p.stock}</span>
+                        ${stockLow ? `<span style="font-size:0.68rem; color:#ad3e39; font-weight:700; margin-left:2px;">— Kritis</span>` : ''}
+                    </div>
+
+                    <!-- Action bar -->
+                    <div class="prod-actions">
+                        <button class="prod-action-btn ${isActive ? 'toggle-active' : 'toggle-inactive'}"
+                                onclick="toggleActive(${p.id}, ${isActive ? 0 : 1})">
+                            ${isActive ? icoCheck : icoOff}
+                            ${isActive ? 'Aktif' : 'Nonaktif'}
+                        </button>
+                        <button class="prod-action-btn edit-btn" onclick="editProduct(${p.id})">
+                            ${icoEdit} Edit
+                        </button>
+                        <button class="prod-action-btn delete-btn"
+                                onclick="deleteProduct(${p.id})"
+                                title="${canDelete ? 'Hapus menu ini' : 'Sudah pernah terjual, tidak bisa dihapus'}"
+                                ${canDelete ? '' : 'style="opacity:.35; cursor:not-allowed;"'}>
+                            ${icoDel}
+                        </button>
+                    </div>
+                </div>`;
             });
             container.innerHTML = html;
         }
@@ -293,6 +358,9 @@
             document.getElementById('prod_photo').value = '';
             document.getElementById('prod_remove_photo').checked = false;
             currentProduct = null;
+
+            // Default: Aktif saat buat baru
+            document.getElementById('prod_active_yes').checked = true;
 
             const catSelect = document.getElementById('prod_category');
             catSelect.innerHTML = categoriesList.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
@@ -315,6 +383,10 @@
             document.getElementById('prod_photo').value = '';
             document.getElementById('prod_remove_photo').checked = false;
             currentProduct = p;
+
+            // Set status aktif/nonaktif sesuai data produk
+            const activeRadio = document.querySelector(`input[name="prod_is_active"][value="${p.is_active ? '1' : '0'}"]`);
+            if (activeRadio) activeRadio.checked = true;
 
             const catSelect = document.getElementById('prod_category');
             catSelect.innerHTML = categoriesList.map(c => `<option value="${c.id}" ${c.id == p.category_id ? 'selected' : ''}>${c.name}</option>`).join('');
@@ -347,6 +419,7 @@
             form.append('stock', document.getElementById('prod_stock').value);
             form.append('image', document.getElementById('prod_image').value.trim());
             form.append('remove_photo', document.getElementById('prod_remove_photo').checked ? '1' : '0');
+            form.append('is_active', document.querySelector('input[name="prod_is_active"]:checked')?.value ?? '1');
 
             const fileInput = document.getElementById('prod_photo');
             if (fileInput.files && fileInput.files[0]) {

@@ -20,7 +20,8 @@ class OwnerDashboardController extends Controller
         return view('owner.dashboard', [
             'user' => $user,
             'ownerTypes' => implode(',', $user->ownerTypes()),
-            'scopeLabel' => $user->scopeLabel(),
+            'scopeLabel' => $user->isAdmin() ? 'Kasir' : $user->scopeLabel(),
+            'dashboardTitle' => $user->isAdmin() ? 'Dashboard Kasir' : ('Dashboard ' . $user->scopeLabel()),
             'scopeBadge' => $user->scopeBadge(),
             'startWorkingLabel' => $user->startWorkingLabel(),
         ]);

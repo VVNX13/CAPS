@@ -169,7 +169,81 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+.owner-nav-actions > * { flex-shrink: 0; }
+
+/* ── Navbar Dropdown ── */
+.nav-dropdown {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+.nav-dropdown-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  user-select: none;
+}
+.nav-dropdown-trigger svg.chevron {
+  transition: transform 0.18s ease;
+}
+.nav-dropdown:hover .nav-dropdown-trigger svg.chevron,
+.nav-dropdown:focus-within .nav-dropdown-trigger svg.chevron {
+  transform: rotate(180deg);
+}
+.nav-dropdown-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 190px;
+  background: #fff;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.10);
+  padding: 6px;
+  z-index: 200;
+  flex-direction: column;
+  gap: 2px;
+}
+.nav-dropdown:hover .nav-dropdown-menu,
+.nav-dropdown:focus-within .nav-dropdown-menu {
+  display: flex;
+}
+.nav-dropdown-menu a,
+.nav-dropdown-menu button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-main, #0f172a);
+  text-decoration: none;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: background 0.14s;
+}
+.nav-dropdown-menu a:hover,
+.nav-dropdown-menu button:hover {
+  background: var(--bg-main, #f8fafc);
+  color: var(--primary, #25382d);
+}
+.nav-dropdown-menu a.active-item {
+  background: var(--primary-light, #e8f0e9);
+  color: var(--primary, #25382d);
+}
+.nav-dropdown-divider {
+  height: 1px;
+  background: var(--border-color);
+  margin: 4px 0;
 }
 
 /*
@@ -349,6 +423,17 @@ body {
   font-size: 0.8rem;
   min-height: 34px;
   border-radius: 8px;
+}
+
+/* ── Compact nav button: icon + short label, fits many links in topbar ── */
+.btn-nav {
+  padding: 5px 10px;
+  font-size: 0.75rem;
+  min-height: 30px;
+  border-radius: 7px;
+  gap: 4px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
 .btn-primary { background: var(--primary); color: #fff; }
@@ -1387,19 +1472,195 @@ body {
 }
 
 /* Owner Products Responsive */
+/* ── Kelola Menu — Product Grid ── */
 .owner-products-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
+  gap: 16px;
 }
 @media (max-width: 480px) {
   .owner-products-grid {
     grid-template-columns: 1fr;
   }
 }
+
+/* Card shell */
 .owner-prod-card {
-  padding: 14px;
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: box-shadow .18s, transform .18s;
+  position: relative;
 }
+.owner-prod-card:hover {
+  box-shadow: 0 8px 24px -4px rgb(0 0 0 / .12);
+  transform: translateY(-2px);
+}
+
+/* Status ribbon (top-right corner) */
+.prod-status-ribbon {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  backdrop-filter: blur(4px);
+}
+.prod-status-ribbon.active {
+  background: rgba(47, 122, 77, .15);
+  color: #2f7a4d;
+  border: 1px solid rgba(47,122,77,.25);
+}
+.prod-status-ribbon.inactive {
+  background: rgba(173, 62, 57, .12);
+  color: #ad3e39;
+  border: 1px solid rgba(173,62,57,.22);
+}
+
+/* Cover image / fallback area */
+.prod-cover {
+  width: 100%;
+  height: 148px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: #f1f5f9;
+  position: relative;
+}
+.prod-cover img,
+.prod-cover > div {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.prod-cover-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+/* Body */
+.prod-body {
+  padding: 14px 14px 0;
+  flex: 1;
+}
+.prod-category-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  margin-bottom: 7px;
+}
+.prod-category-badge.food {
+  background: #fff4df;
+  color: #9b641c;
+}
+.prod-category-badge.drink {
+  background: #e6f2e8;
+  color: #2f7a4d;
+}
+.prod-name {
+  font-size: 0.98rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.3;
+  margin-bottom: 4px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.prod-price {
+  font-size: 1.08rem;
+  font-weight: 800;
+  color: var(--primary);
+  margin-bottom: 10px;
+}
+
+/* Stock row */
+.prod-stock-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: #f8fafc;
+  border-top: 1px solid #f1f5f9;
+  font-size: 0.78rem;
+  color: #64748b;
+}
+.prod-stock-val {
+  font-weight: 800;
+  color: #0f172a;
+}
+.prod-stock-val.low {
+  color: #ad3e39;
+}
+
+/* Action bar */
+.prod-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 0;
+  border-top: 1px solid #f1f5f9;
+}
+.prod-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 10px 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+  color: #64748b;
+  letter-spacing: 0.01em;
+}
+.prod-action-btn:not(:last-child) {
+  border-right: 1px solid #f1f5f9;
+}
+.prod-action-btn.toggle-active {
+  color: #2f7a4d;
+}
+.prod-action-btn.toggle-inactive {
+  color: #94a3b8;
+}
+.prod-action-btn.edit-btn:hover {
+  background: #f1f5f9;
+  color: var(--primary);
+}
+.prod-action-btn.toggle-active:hover {
+  background: #e6f2e8;
+}
+.prod-action-btn.toggle-inactive:hover {
+  background: #f8fafc;
+  color: #475569;
+}
+.prod-action-btn.delete-btn {
+  color: #cbd5e1;
+  width: 42px;
+}
+.prod-action-btn.delete-btn:hover {
+  background: #fef2f2;
+  color: #ad3e39;
+}
+
+/* Thumbnail (kept for compat) */
 .owner-prod-thumb {
   width: 65px;
   height: 65px;

@@ -68,9 +68,10 @@ function renderSaleRows(sales) {
                     </div>
                     <div style="display:flex; align-items:center; gap:8px;">
                         <strong style="color:#dc2626;">${formatRupiah(sale.total_amount)}</strong>
-                        <button type="button" class="btn btn-success btn-sm"
+                        <button type="button" class="btn btn-success btn-sm" style="display:inline-flex; align-items:center; gap:5px;"
                                 onclick="markUnpaidPaid(${sale.sale_id}, '${escapeHtml(sale.invoice_number)}')">
-                            ✅ Lunasi
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            Lunasi
                         </button>
                     </div>
                 </div>
@@ -86,7 +87,9 @@ function renderUnpaidGroups(groups) {
     if (!groups.length) {
         container.innerHTML = `
             <div style="text-align:center; padding:40px 20px; background:#fff; border-radius:16px; border:1px dashed #cbd5e1;">
-                <div style="font-size:2.5rem; margin-bottom:8px;">✅</div>
+                <div style="width:48px; height:48px; border-radius:50%; background:#d1fae5; display:flex; align-items:center; justify-content:center; margin:0 auto 12px;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
                 <h3 style="color:#059669; font-size:1.1rem; font-weight:700;">Tidak ada tagihan tertunggak</h3>
                 <p style="color:#94a3b8; font-size:0.85rem; margin-top:2px;">Semua pesanan sudah dibayar oleh pelanggan.</p>
             </div>`;
@@ -101,8 +104,14 @@ function renderUnpaidGroups(groups) {
             : '<span style="color:#dc2626;">nomor tidak valid</span>';
 
         const actions = canCall ? `
-            <a href="${escapeHtml(group.tel_link)}" class="btn btn-primary btn-sm">📞 Telepon</a>
-            <a href="${escapeHtml(group.whatsapp_link)}" target="_blank" rel="noopener" class="btn btn-success btn-sm">💬 WhatsApp</a>
+            <a href="${escapeHtml(group.tel_link)}" class="btn btn-primary btn-sm" style="display:inline-flex; align-items:center; gap:5px;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.44 2 2 0 0 1 3.59 1.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.83a16 16 0 0 0 6.26 6.26l1.13-.9a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                Telepon
+            </a>
+            <a href="${escapeHtml(group.whatsapp_link)}" target="_blank" rel="noopener" class="btn btn-success btn-sm" style="display:inline-flex; align-items:center; gap:5px;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M11.998 2C6.477 2 2 6.477 2 12c0 1.76.459 3.413 1.261 4.845L2 22l5.272-1.388A9.956 9.956 0 0 0 11.998 22c5.523 0 10-4.477 10-10S17.521 2 11.998 2z"/></svg>
+                WhatsApp
+            </a>
         ` : `
             <span class="badge-unpaid-late" style="font-size:0.7rem; padding:3px 8px;">Tidak bisa ditagih</span>
         `;
@@ -116,7 +125,9 @@ function renderUnpaidGroups(groups) {
                 <div class="unpaid-group-head">
                     <div style="min-width:0;">
                         <div style="font-weight:800; font-size:1rem; color:#0f172a; overflow-wrap:anywhere;">${name}</div>
-                        <div style="font-size:0.82rem; color:#64748b; margin-top:2px; overflow-wrap:anywhere;">📱 ${phone}</div>
+                        <div style="font-size:0.82rem; color:#64748b; margin-top:2px; overflow-wrap:anywhere; display:flex; align-items:center; gap:5px;">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+                            ${phone}</div>
                         <div style="font-size:0.75rem; color:#94a3b8; margin-top:2px;">${count}</div>
                     </div>
                     <div style="text-align:right; flex-shrink:0;">
@@ -190,7 +201,7 @@ function showUnpaidToast(msg) {
 
     const toast = document.createElement('div');
     toast.className = 'toast';
-    toast.innerHTML = `<span>💸</span> <span>${escapeHtml(msg)}</span>`;
+    toast.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="20 6 9 17 4 12"/></svg> <span>${escapeHtml(msg)}</span>`;
     container.appendChild(toast);
 
     setTimeout(() => toast.remove(), 3500);

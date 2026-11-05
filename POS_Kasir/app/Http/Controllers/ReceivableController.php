@@ -45,19 +45,23 @@ class ReceivableController extends Controller
     {
         $ownerTypes = $request->user()->ownerTypes();
 
-        $sales = DB::table('sales as s')
-            ->join('sale_items as si', 'si.sale_id', '=', 's.id')
+        // Ambil sale_id yang relevan dulu (scope kategori owner)
+        $relevantSaleIds = DB::table('sale_items as si')
             ->join('products as p', 'si.product_id', '=', 'p.id')
             ->join('categories as c', 'p.category_id', '=', 'c.id')
+            ->whereIn('c.owner_type', $ownerTypes)
+            ->pluck('si.sale_id')
+            ->unique()
+            ->values();
+
+        // Ambil data sales langsung (tidak di-join ke items) agar total_amount tidak dikali jumlah item
+        $sales = DB::table('sales as s')
+            ->whereIn('s.id', $relevantSaleIds)
             ->where('s.payment_status', 'unpaid')
             ->where('s.order_status', '!=', 'canceled')
             ->where('s.created_at', '>=', now()->subDays(self::CHASE_WINDOW_DAYS))
-            ->whereIn('c.owner_type', $ownerTypes)
-            ->groupBy('s.id', 's.invoice_number', 's.customer_name', 's.customer_phone')
-            ->select('s.id', 's.invoice_number', 's.customer_name', 's.customer_phone')
-            ->selectRaw('MIN(s.created_at) AS created_at')
-            ->selectRaw('SUM(s.total_amount) AS total_amount')
-            ->orderBy('created_at')
+            ->select('s.id', 's.invoice_number', 's.customer_name', 's.customer_phone', 's.created_at', 's.total_amount')
+            ->orderBy('s.created_at')
             ->get();
 
         $items = DB::table('sale_items as si')

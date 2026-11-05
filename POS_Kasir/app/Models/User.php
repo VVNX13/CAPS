@@ -80,11 +80,11 @@ class User extends Authenticatable
     }
 
     /**
-     * Badge text, e.g. "MAKANAN", "MINUMAN", "ADMIN".
+     * Badge text, e.g. "MAKANAN", "MINUMAN", "KASIR".
      */
     public function scopeBadge(): string
     {
-        return $this->isAdmin() ? 'ADMIN' : strtoupper($this->ownerType);
+        return $this->isAdmin() ? 'KASIR' : strtoupper($this->ownerType);
     }
 
     /**
