@@ -852,8 +852,8 @@
             const toggleBtn = document.getElementById('btnTogglePush');
             const testBtn   = document.getElementById('btnTestPush');
             if (!pushState.enabled) { statusEl.textContent = 'Notifikasi belum dikonfigurasi.'; toggleBtn.style.display = 'none'; testBtn.style.display = 'none'; return; }
-            if (pushState.subscribed) { statusEl.textContent = `Aktif — ${(pushState.devices||[]).length} perangkat.`; toggleBtn.textContent = '🔕 Matikan'; toggleBtn.className = 'btn btn-outline btn-sm'; testBtn.style.display = ''; return; }
-            statusEl.textContent = 'Belum aktif.'; toggleBtn.textContent = '🔔 Aktifkan Notifikasi'; toggleBtn.className = 'btn btn-primary btn-sm'; testBtn.style.display = 'none';
+            if (pushState.subscribed) { statusEl.textContent = `Aktif — ${(pushState.devices||[]).length} perangkat.`; toggleBtn.innerHTML = icon('bell-off') + ' Matikan'; toggleBtn.className = 'btn btn-outline btn-sm'; testBtn.style.display = ''; return; }
+            statusEl.textContent = 'Belum aktif.'; toggleBtn.innerHTML = icon('bell') + ' Aktifkan Notifikasi'; toggleBtn.className = 'btn btn-primary btn-sm'; testBtn.style.display = 'none';
         }
         async function togglePush() {
             const result = pushState.subscribed ? await window.PWA.unsubscribePush() : await window.PWA.subscribePush(pushState.public_key);

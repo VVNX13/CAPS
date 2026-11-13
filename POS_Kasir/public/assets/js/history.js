@@ -81,31 +81,31 @@ function renderHistoryOrders(orders) {
     if (!orders.length) {
         container.innerHTML = `
             <div style="text-align:center; padding:40px 20px; background:#fff; border-radius:16px; border:1px dashed #cbd5e1;">
-                <div style="font-size:2.5rem; margin-bottom:8px;">🔍</div>
+                ${icon('search', 'icon-empty-state')}
                 <h3 style="color:#64748b; font-size:1.05rem; font-weight:700;">Belum ada pesanan</h3>
                 <p style="color:#94a3b8; font-size:0.85rem; margin-top:4px;">
                     Nomor ini tidak punya pesanan dalam 90 hari terakhir. Pastikan nomornya sama dengan saat memesan.
                 </p>
-                <a href="/" class="btn btn-primary btn-sm" style="margin-top:14px;">☕ Pesan Sekarang</a>
+                <a href="/" class="btn btn-primary btn-sm" style="margin-top:14px;">${icon('coffee')} Pesan Sekarang</a>
             </div>`;
         return;
     }
 
     container.innerHTML = orders.map((order) => {
         const paidBadge = order.is_canceled
-            ? '<span class="brand-badge" style="background:#f1f5f9; color:#64748b;">❌ DIBATALKAN</span>'
+            ? '<span class="brand-badge" style="background:#f1f5f9; color:#64748b;">' + icon('x-circle') + ' DIBATALKAN</span>'
             : order.is_paid
-                ? '<span class="brand-badge" style="background:#d1fae5; color:#059669;">✅ LUNAS</span>'
-                : '<span class="brand-badge badge-unpaid-late">⚠️ BELUM BAYAR</span>';
+                ? '<span class="brand-badge" style="background:#d1fae5; color:#059669;">' + icon('check-circle') + ' LUNAS</span>'
+                : '<span class="brand-badge badge-unpaid-late">' + icon('alert-triangle') + ' BELUM BAYAR</span>';
 
-        const method = order.payment_method === 'cash' ? '💵 Tunai' : '📱 QRIS';
-        const service = order.service_type === 'dine_in' ? '🍽️ Makan di Tempat' : '🛍️ Bungkus';
+        const method = order.payment_method === 'cash' ? icon('banknote') + ' Tunai' : icon('qr-code') + ' QRIS';
+        const service = order.service_type === 'dine_in' ? icon('utensils') + ' Makan di Tempat' : icon('shopping-bag') + ' Bungkus';
 
         const items = order.items.map((i) => `
             <li style="display:flex; justify-content:space-between; gap:8px; font-size:0.83rem; color:#475569; margin-bottom:4px;">
                 <div>
                     <span>${escapeHtml(i.product_name)} &times; ${i.quantity}</span>
-                    ${i.notes ? `<div style="font-size:0.72rem; color:#92400e; background:#fef3c7; display:inline-block; padding:1px 5px; border-radius:4px; margin-top:2px;">📝 ${escapeHtml(i.notes)}</div>` : ''}
+                    ${i.notes ? `<div style="font-size:0.72rem; color:#92400e; background:#fef3c7; display:inline-block; padding:1px 5px; border-radius:4px; margin-top:2px;">${icon('file-text')} ${escapeHtml(i.notes)}</div>` : ''}
                 </div>
                 <span style="font-weight:700; color:#0f172a;">${formatRupiah(i.subtotal)}</span>
             </li>`).join('');
@@ -130,19 +130,19 @@ function renderHistoryOrders(orders) {
 
                 ${order.is_canceled ? `
                     <div style="background:#f1f5f9; color:#475569; padding:10px 12px; border-radius:10px; margin-top:12px; font-size:0.83rem;">
-                        ❌ Pesanan ini <strong>dibatalkan</strong> oleh kasir.
+                        ${icon('x-circle')} Pesanan ini <strong>dibatalkan</strong> oleh kasir.
                     </div>` : ''}
 
                 ${!order.is_paid && !order.is_canceled ? `
                     <div style="background:#fef2f2; color:#b91c1c; padding:10px 12px; border-radius:10px; margin-top:12px; font-size:0.83rem;">
-                        💸 Pesanan ini <strong>belum dibayar</strong>. Silakan bayar di kasir saat mengambil pesanan.
+                        ${icon('wallet')} Pesanan ini <strong>belum dibayar</strong>. Silakan bayar di kasir saat mengambil pesanan.
                     </div>` : ''}
 
                 <ul class="history-items">${items}</ul>
 
                 <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
-                    <a href="${escapeHtml(order.receipt_url)}" class="btn btn-outline btn-sm">🧾 Lihat Struk</a>
-                    <a href="/menu?reorder=${reorderItems}" class="btn btn-primary btn-sm">🔁 Pesan Lagi</a>
+                    <a href="${escapeHtml(order.receipt_url)}" class="btn btn-outline btn-sm">${icon('receipt')} Lihat Struk</a>
+                    <a href="/menu?reorder=${reorderItems}" class="btn btn-primary btn-sm">${icon('repeat')} Pesan Lagi</a>
                 </div>
             </div>`;
     }).join('');

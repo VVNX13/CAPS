@@ -8,16 +8,16 @@
     <header class="app-header">
         <div class="app-header-inner">
             <a href="{{ route('menu') }}" class="brand-logo" style="text-decoration:none; display:flex; align-items:center; gap:8px;">
-                <span class="brand-icon" style="font-size:1.5rem;">🌿</span>
+                <span class="icon-chip icon-chip-green"><x-icon name="leaf" /></span>
                 <div>
                     <span class="brand-text" style="font-weight:800; font-size:1.05rem; color:var(--text-main); display:block; line-height:1.15;">TAMAN CAFE</span>
                     <span style="font-size:0.68rem; color:var(--text-muted); font-weight:600; display:block;">Coffee · Food · Garden</span>
                 </div>
             </a>
             <div style="display:flex; align-items:center; gap:8px;">
-                <a href="{{ route('history') }}" class="btn btn-outline btn-sm">🧾 Riwayat</a>
+                <a href="{{ route('history') }}" class="btn btn-outline btn-sm"><x-icon name="receipt" /> Riwayat</a>
                 <button type="button" class="btn btn-primary btn-sm" onclick="openCartModal()" style="display:inline-flex; align-items:center; gap:6px;">
-                    🛒 <span id="headerCartCount" style="background:#ffffff; color:var(--accent); font-size:0.75rem; font-weight:800; padding:1px 6px; border-radius:9999px;">0</span>
+                    <x-icon name="shopping-cart" /> <span id="headerCartCount" style="background:#ffffff; color:var(--accent); font-size:0.75rem; font-weight:800; padding:1px 6px; border-radius:9999px;">0</span>
                 </button>
             </div>
         </div>
@@ -40,7 +40,7 @@
     <main class="container app-content" style="padding-top:0;">
         <!-- Offline Notice -->
         <div id="offlineBanner" style="display:none; background:#fef3c7; border:1px solid #fcd34d; color:#92400e; padding:12px 14px; border-radius:12px; margin-bottom:14px; font-size:0.85rem; font-weight:600;">
-            ⚠️ Anda sedang offline. Menu tetap bisa dilihat, tetapi pesanan tidak bisa dikirim sampai koneksi kembali.
+            <x-icon name="wifi-off" /> Anda sedang offline. Menu tetap bisa dilihat, tetapi pesanan tidak bisa dikirim sampai koneksi kembali.
         </div>
 
         <!-- Rekomendasi Menu Pilihan (Top Sales 1 Bulan) -->
@@ -48,7 +48,7 @@
             <div class="rec-section-header">
                 <div>
                     <div class="rec-header-badge">
-                        <span>⭐ Rekomendasi Top Sales</span>
+                        <x-icon name="star" /><span>Rekomendasi Top Sales</span>
                     </div>
                     <h3 class="rec-header-title">Menu Paling Terlaris &amp; Favorit</h3>
                     <p class="rec-header-desc">Pilihan nomor satu yang paling banyak dipesan pelanggan Taman Cafe.</p>
@@ -59,9 +59,9 @@
             <div class="rec-cards-grid">
                 @php
                     $recItems = [
-                        ['badge' => '⭐ #1 Minuman', 'sales' => '480x Terjual', 'name' => 'Kopi Susu Gula Aren', 'desc' => 'Espresso blend Arabika & Robusta lokal, susu creamy, dan gula aren organik murni.', 'price' => 24000, 'img' => 'ChatGPT-Image-Oct-2_-2026_-09_13_15-PM-2.png', 'cat' => 'minuman'],
-                        ['badge' => '⭐ #1 Makanan', 'sales' => '310x Terjual', 'name' => 'Nasi Goreng Kampung', 'desc' => 'Nasi goreng bumbu rempah nusantara, telur mata sapi, ayam suwir & kerupuk udang.', 'price' => 38000, 'img' => 'ChatGPT-Image-Oct-2_-2026_-09_13_19-PM-5.png', 'cat' => 'makanan'],
-                        ['badge' => '⭐ #1 Snack', 'sales' => '380x Terjual', 'name' => 'Truffle Parmesan Fries', 'desc' => 'Kentang goreng renyah bumbu white truffle oil, taburan keju parmesan melimpah & parsley.', 'price' => 30000, 'img' => 'ChatGPT-Image-Oct-2_-2026_-09_13_21-PM-7.png', 'cat' => 'makanan'],
+                        ['badge' => '#1 Minuman', 'sales' => '480x Terjual', 'name' => 'Kopi Susu Gula Aren', 'desc' => 'Espresso blend Arabika & Robusta lokal, susu creamy, dan gula aren organik murni.', 'price' => 24000, 'img' => 'ChatGPT-Image-Oct-2_-2026_-09_13_15-PM-2.png', 'cat' => 'minuman'],
+                        ['badge' => '#1 Makanan', 'sales' => '310x Terjual', 'name' => 'Nasi Goreng Kampung', 'desc' => 'Nasi goreng bumbu rempah nusantara, telur mata sapi, ayam suwir & kerupuk udang.', 'price' => 38000, 'img' => 'ChatGPT-Image-Oct-2_-2026_-09_13_19-PM-5.png', 'cat' => 'makanan'],
+                        ['badge' => '#1 Snack', 'sales' => '380x Terjual', 'name' => 'Truffle Parmesan Fries', 'desc' => 'Kentang goreng renyah bumbu white truffle oil, taburan keju parmesan melimpah & parsley.', 'price' => 30000, 'img' => 'ChatGPT-Image-Oct-2_-2026_-09_13_21-PM-7.png', 'cat' => 'makanan'],
                     ];
                 @endphp
                 @foreach ($recItems as $rec)
@@ -87,7 +87,7 @@
                     <div class="rec-card" style="cursor:pointer;"
                          onclick="openProductPreview(event, { id: {{ $targetId }}, name: @js($targetName), price: {{ $targetPrice }}, image: @js($targetImgUrl), category: @js($targetCat), ownerType: @js($rec['cat']), stock: {{ $targetStock }}, desc: @js($rec['desc']), badge: @js($rec['badge'] . ' · ' . $rec['sales']) })">
                         <div class="rec-card-img-wrap">
-                            <span class="rec-card-badge">{{ $rec['badge'] }}</span>
+                            <span class="rec-card-badge"><x-icon name="star" /> {{ $rec['badge'] }}</span>
                             <span class="rec-card-sales-pill">{{ $rec['sales'] }}</span>
                             <img src="{{ $targetImgUrl }}" alt="{{ $rec['name'] }}" loading="lazy">
                         </div>
@@ -114,13 +114,13 @@
             <div class="rec-section-header">
                 <div>
                     <div class="rec-header-badge" style="background:#e0f2fe; color:#0369a1; border-color:#bae6fd;">
-                        <span>🎯 Rekomendasi Pilihanmu</span>
+                        <x-icon name="target" /><span>Rekomendasi Pilihanmu</span>
                     </div>
                     <h3 class="rec-header-title">Menu Pilihan Sesuai Seleramu</h3>
                     <p class="rec-header-desc" id="prefActiveTagsLabel">Disaring khusus sesuai preferensi rasa yang Anda pilih.</p>
                 </div>
                 <button type="button" class="btn btn-outline btn-sm" onclick="openPreferenceModal()" style="border-radius:9999px; padding:6px 14px; font-size:0.8rem; font-weight:700;">
-                    ✏️ Ubah Selera
+                    <x-icon name="pencil" /> Ubah Selera
                 </button>
             </div>
 
@@ -132,7 +132,7 @@
         <!-- Banner jika kuisioner dilewati / belum diisi -->
         <div id="prefInviteBanner" class="pref-invite-banner" style="display:none; margin-top:16px;">
             <div class="pref-invite-content">
-                <span class="pref-invite-icon">✨</span>
+                <span class="pref-invite-icon"><x-icon name="sparkles" /></span>
                 <div>
                     <div class="pref-invite-title">Cari menu yang cocok dengan seleramu hari ini?</div>
                     <div class="pref-invite-sub">Pilih preferensi rasa makanan &amp; minuman favoritmu dalam 3 detik.</div>
@@ -146,7 +146,7 @@
         <!-- Search & Sort Bar -->
         <div class="menu-search-wrapper">
             <div class="menu-search-box">
-                <span class="search-icon">🔍</span>
+                <span class="search-icon"><x-icon name="search" /></span>
                 <input type="text" id="menuSearchInput" class="menu-search-input" placeholder="Cari makanan, snack, atau minuman..." oninput="filterMenuSearch()">
             </div>
             <select id="menuSortSelect" class="menu-sort-select" onchange="applyFilters()">
@@ -161,11 +161,11 @@
         <div class="category-scroll-container">
             <div class="category-scroll" id="categoryTabs">
                 <button type="button" class="category-pill active" data-cat="all" onclick="selectCategory('all')">
-                    ✨ Semua
+                    <x-icon name="sparkles" /> Semua
                 </button>
                 @foreach ($categories as $category)
                     <button type="button" class="category-pill" data-cat="{{ $category->id }}" onclick="selectCategory('{{ $category->id }}')">
-                        {{ $category->owner_type === 'makanan' ? '🍲' : '🍹' }} {{ $category->name }}
+                        <x-icon :name="$category->owner_type === 'makanan' ? 'soup' : 'cup-soda'" /> {{ $category->name }}
                     </button>
                 @endforeach
             </div>
@@ -187,7 +187,7 @@
                         @else
                             <div class="card-product-img card-product-img-placeholder {{ $isFood ? 'ph-food' : 'ph-drink' }}"
                                  role="img" aria-label="{{ $product->name }}">
-                                <span class="ph-emoji">{{ $isFood ? '🍲' : '🥤' }}</span>
+                                <span class="ph-icon"><x-icon :name="$isFood ? 'soup' : 'cup-soda'" /></span>
                             </div>
                         @endif
 
@@ -220,7 +220,7 @@
 
         <!-- Empty State Search Result -->
         <div id="emptySearchState" style="display:none; text-align:center; padding: 40px 20px; background:#fff; border-radius:16px; border:1px dashed #cbd5e1; margin-top:20px;">
-            <div style="font-size:2.5rem; margin-bottom:8px;">🔍</div>
+            <x-icon name="search" class="icon-empty-state" />
             <h3 style="font-weight:700; color:#475569;">Menu Tidak Ditemukan</h3>
             <p style="font-size:0.85rem; color:#94a3b8;">Coba cari dengan kata kunci lain.</p>
         </div>
@@ -268,7 +268,7 @@
     <div class="floating-cart-bar" id="floatingCartBar" style="display:none;" onclick="openCartModal()">
         <div class="floating-cart-left">
             <div class="floating-cart-badge-icon">
-                🛒
+                <x-icon name="shopping-cart" />
                 <span class="cart-badge-bubble" id="cartBadgeCount">0</span>
             </div>
             <div class="floating-cart-info">
@@ -303,7 +303,7 @@
                     <div class="promo-apply">
                         <div class="promo-apply-row">
                             <input type="text" id="promoCodeInput" class="form-control" maxlength="30"
-                                   placeholder="🏷️ Punya kode kupon?" autocomplete="off" aria-label="Kode kupon"
+                                   placeholder="Punya kode kupon?" autocomplete="off" aria-label="Kode kupon"
                                    style="text-transform:uppercase;"
                                    onkeydown="if (event.key === 'Enter') { event.preventDefault(); applyPromoCode(); }">
                             <button type="button" id="btnApplyPromo" class="btn btn-outline btn-sm" onclick="applyPromoCode()">Pakai</button>
@@ -322,13 +322,13 @@
                     </div>
 
                     <!-- Pilihan Layanan -->
-                    <h4 class="form-section-title">🍽️ Pilihan Layanan</h4>
+                    <h4 class="form-section-title"><x-icon name="utensils" /> Pilihan Layanan</h4>
                     <div class="toggle-service">
                         <div class="toggle-btn active" id="btnDineIn" onclick="setServiceType('dine_in')">
-                            🍽️ Makan di Meja
+                            <x-icon name="utensils" /> Makan di Meja
                         </div>
                         <div class="toggle-btn" id="btnTakeaway" onclick="setServiceType('takeaway')">
-                            🛍️ Bungkus (Takeaway)
+                            <x-icon name="shopping-bag" /> Bungkus (Takeaway)
                         </div>
                     </div>
                     <input type="hidden" id="service_type" value="dine_in">
@@ -344,7 +344,7 @@
                     </div>
 
                     <!-- Data Pelanggan -->
-                    <h4 class="form-section-title">👤 Informasi Pemesan</h4>
+                    <h4 class="form-section-title"><x-icon name="user" /> Informasi Pemesan</h4>
 
                     <div class="form-group">
                         <label class="form-label">Nama Anda <span class="req-star">*</span></label>
@@ -362,13 +362,13 @@
                     </div>
 
                     <!-- Metode Pembayaran -->
-                    <h4 class="form-section-title">💳 Metode Pembayaran</h4>
+                    <h4 class="form-section-title"><x-icon name="credit-card" /> Metode Pembayaran</h4>
                     <div class="payment-options">
                         <label class="payment-card-option">
                             <input type="radio" name="payment_method" value="qris" checked>
                             <div class="payment-card-content">
                                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                                    <div class="payment-card-title">📱 QRIS Terpusat (Dinamis)</div>
+                                    <div class="payment-card-title with-icon"><x-icon name="qr-code" /> QRIS Terpusat (Dinamis)</div>
                                     <span class="brand-badge badge-qris">Instan &amp; Pas</span>
                                 </div>
                                 <div class="payment-card-subtitle">BCA, GoPay, OVO, Dana, ShopeePay, LinkAja, Mobile Banking</div>
@@ -377,7 +377,7 @@
                         <label class="payment-card-option">
                             <input type="radio" name="payment_method" value="cash">
                             <div class="payment-card-content">
-                                <div class="payment-card-title">💵 Bayar Tunai di Kasir</div>
+                                <div class="payment-card-title with-icon"><x-icon name="banknote" /> Bayar Tunai di Kasir</div>
                                 <div class="payment-card-subtitle">Pesanan langsung diproses, bayar saat pesanan disajikan / di kasir</div>
                             </div>
                         </label>
@@ -387,7 +387,7 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline" onclick="closeCartModal()">Batal</button>
                     <button type="submit" id="btnSubmitOrder" class="btn btn-primary" style="flex:1;">
-                        Kirim Pesanan Sekarang 🚀
+                        Kirim Pesanan Sekarang <x-icon name="send" />
                     </button>
                 </div>
             </form>
@@ -401,7 +401,7 @@
 
             <div class="modal-header pref-modal-header">
                 <div style="display:flex; align-items:center; gap:12px;">
-                    <div class="pref-modal-icon-badge">✨</div>
+                    <div class="pref-modal-icon-badge"><x-icon name="sparkles" /></div>
                     <div>
                         <h3 style="font-size:1.1rem; font-weight:800; color:var(--text-main); line-height:1.2;">Preferensi Selera Anda</h3>
                         <p style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">Pilih selera rasa untuk rekomendasi menu yang paling pas (opsional)</p>
@@ -414,30 +414,30 @@
                 <!-- Pertanyaan Makanan -->
                 <div class="pref-question-group">
                     <div class="pref-question-label">
-                        <span>🍲</span>
+                        <x-icon name="soup" />
                         <span>Selera Makanan Favorit</span>
                         <span class="pref-tag-hint">Bisa pilih lebih dari 1</span>
                     </div>
                     <div class="pref-chips-grid">
                         <button type="button" class="pref-chip" data-pref="pedas" onclick="togglePrefChip(this)">
-                            <span class="pref-chip-emoji">🌶️</span>
+                            <span class="pref-chip-emoji"><x-icon name="flame" /></span>
                             <span class="pref-chip-text">Pedas &amp; Gurih</span>
-                            <span class="pref-chip-check">✓</span>
+                            <span class="pref-chip-check"><x-icon name="check" /></span>
                         </button>
                         <button type="button" class="pref-chip" data-pref="gurih" onclick="togglePrefChip(this)">
-                            <span class="pref-chip-emoji">🍗</span>
+                            <span class="pref-chip-emoji"><x-icon name="drumstick" /></span>
                             <span class="pref-chip-text">Gurih / Crispy</span>
-                            <span class="pref-chip-check">✓</span>
+                            <span class="pref-chip-check"><x-icon name="check" /></span>
                         </button>
                         <button type="button" class="pref-chip" data-pref="manis" onclick="togglePrefChip(this)">
-                            <span class="pref-chip-emoji">🍯</span>
+                            <span class="pref-chip-emoji"><x-icon name="candy" /></span>
                             <span class="pref-chip-text">Manis &amp; Legit</span>
-                            <span class="pref-chip-check">✓</span>
+                            <span class="pref-chip-check"><x-icon name="check" /></span>
                         </button>
                         <button type="button" class="pref-chip" data-pref="hangat" onclick="togglePrefChip(this)">
-                            <span class="pref-chip-emoji">🍲</span>
+                            <span class="pref-chip-emoji"><x-icon name="soup" /></span>
                             <span class="pref-chip-text">Kuah Rempah Hangat</span>
-                            <span class="pref-chip-check">✓</span>
+                            <span class="pref-chip-check"><x-icon name="check" /></span>
                         </button>
                     </div>
                 </div>
@@ -445,30 +445,30 @@
                 <!-- Pertanyaan Minuman -->
                 <div class="pref-question-group" style="margin-top:18px;">
                     <div class="pref-question-label">
-                        <span>🍹</span>
+                        <x-icon name="cup-soda" />
                         <span>Ingin Minuman Seperti Apa?</span>
                         <span class="pref-tag-hint">Bisa pilih lebih dari 1</span>
                     </div>
                     <div class="pref-chips-grid">
                         <button type="button" class="pref-chip" data-pref="segar" onclick="togglePrefChip(this)">
-                            <span class="pref-chip-emoji">🧊</span>
+                            <span class="pref-chip-emoji"><x-icon name="snowflake" /></span>
                             <span class="pref-chip-text">Dingin &amp; Segar</span>
-                            <span class="pref-chip-check">✓</span>
+                            <span class="pref-chip-check"><x-icon name="check" /></span>
                         </button>
                         <button type="button" class="pref-chip" data-pref="kopi" onclick="togglePrefChip(this)">
-                            <span class="pref-chip-emoji">☕</span>
+                            <span class="pref-chip-emoji"><x-icon name="coffee" /></span>
                             <span class="pref-chip-text">Kopi Mantap</span>
-                            <span class="pref-chip-check">✓</span>
+                            <span class="pref-chip-check"><x-icon name="check" /></span>
                         </button>
                         <button type="button" class="pref-chip" data-pref="creamy" onclick="togglePrefChip(this)">
-                            <span class="pref-chip-emoji">🥛</span>
+                            <span class="pref-chip-emoji"><x-icon name="milk" /></span>
                             <span class="pref-chip-text">Creamy &amp; Susu</span>
-                            <span class="pref-chip-check">✓</span>
+                            <span class="pref-chip-check"><x-icon name="check" /></span>
                         </button>
                         <button type="button" class="pref-chip" data-pref="buah" onclick="togglePrefChip(this)">
-                            <span class="pref-chip-emoji">🥭</span>
+                            <span class="pref-chip-emoji"><x-icon name="citrus" /></span>
                             <span class="pref-chip-text">Jus Buah Asli</span>
-                            <span class="pref-chip-check">✓</span>
+                            <span class="pref-chip-check"><x-icon name="check" /></span>
                         </button>
                     </div>
                 </div>

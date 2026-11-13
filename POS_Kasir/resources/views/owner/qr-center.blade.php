@@ -17,11 +17,10 @@
         @include('owner.partials.navbar', [
             'current' => 'qr-center',
             'title' => 'Cetak QR Meja',
-            'icon' => '🖨️',
         ])
 
         <div style="max-width:540px; margin:0 auto 16px; display:flex; justify-content:flex-end; align-items:center; flex-wrap:wrap; gap:10px;">
-            <button onclick="window.print()" class="btn btn-primary btn-sm">🖨️ Cetak Semua QR Stand</button>
+            <button onclick="window.print()" class="btn btn-primary btn-sm"><x-icon name="printer" /> Cetak Semua QR Stand</button>
         </div>
     </div>
 
@@ -30,7 +29,7 @@
 
         <!-- CARD 1: QR Stand Meja (Self-Order Hub) -->
         <div class="print-card" style="background:#fff; padding:32px 24px; border-radius:24px; border:2px dashed #2563eb; text-align:center; box-shadow:var(--shadow-md);">
-            <div style="font-size:2.6rem; margin-bottom:6px;">🍽️</div>
+            <div style="font-size:2.6rem; margin-bottom:6px; color:#25382d;"><x-icon name="utensils" /></div>
             <h1 style="font-size:1.5rem; font-weight:900; color:#1e3a8a; margin-bottom:4px;">{{ config('app.name') }}</h1>
             <p style="font-size:0.85rem; color:#64748b; margin-bottom:16px;">Scan 1 QR Code untuk Pesan &amp; Bayar dari Meja</p>
 
@@ -40,7 +39,7 @@
             </div>
 
             <div style="background:#eff6ff; padding:10px 14px; border-radius:12px; margin-bottom:14px; font-size:0.85rem; color:#1e40af; font-weight:700;">
-                🍲 Makanan &bull; 🍹 Minuman &bull; 📱 QRIS &amp; Tunai
+                <x-icon name="soup" /> Makanan &bull; <x-icon name="cup-soda" /> Minuman &bull; <x-icon name="qr-code" /> QRIS &amp; Tunai
             </div>
 
             <div style="font-size:0.8rem; color:#64748b; line-height:1.6; text-align:center;">

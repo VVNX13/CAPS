@@ -57,12 +57,12 @@ function applyReorderFromUrl() {
   if (added > 0) {
     renderCartBadge();
     openCartModal();
-    showToast(`🔁 ${added} menu dimuat lagi ke keranjang`);
+    showToast(`${added} menu dimuat lagi ke keranjang`, 'repeat');
   }
 
   if (missing.length > 0) {
     setTimeout(() => {
-      showToast(`⚠️ ${missing.length} menu sudah tidak tersedia, dilewati`);
+      showToast(`${missing.length} menu sudah tidak tersedia, dilewati`, 'alert-triangle');
     }, 600);
   }
 
@@ -263,7 +263,7 @@ function renderCartModalItems() {
   if (items.length === 0) {
     container.innerHTML = `
       <div style="text-align:center; padding:30px 10px; color:#64748b;">
-        <div style="font-size:2rem; margin-bottom:6px;">🛒</div>
+        ${icon('shopping-cart', 'icon-empty-state')}
         Keranjang pesanan masih kosong.
       </div>`;
     renderCartTotals();
@@ -326,7 +326,7 @@ function renderCartTotals() {
 function setPromoStatus(message, ok) {
   const el = document.getElementById('promoStatus');
   if (!el) return;
-  el.textContent = message || '';
+  el.innerHTML = message ? iconText(ok ? 'check-circle' : 'x-circle', message) : '';
   el.className = 'promo-status' + (message ? (ok ? ' is-ok' : ' is-error') : '');
 }
 
@@ -366,11 +366,11 @@ async function applyPromoCode() {
     appliedPromo = { ...data, subtotal };
     input.value = data.code;
     btn.innerText = 'Hapus';
-    setPromoStatus(`✅ ${data.name}: hemat ${formatRupiah(data.discount)}`, true);
+    setPromoStatus(`${data.name}: hemat ${formatRupiah(data.discount)}`, true);
   } catch (err) {
     appliedPromo = null;
     btn.innerText = 'Pakai';
-    setPromoStatus('❌ ' + err.message, false);
+    setPromoStatus(err.message, false);
   } finally {
     btn.disabled = false;
     renderCartTotals();
@@ -397,11 +397,11 @@ function refreshAppliedPromo() {
     try {
       const data = await checkPromo(appliedPromo.code, subtotal);
       appliedPromo = { ...data, subtotal };
-      setPromoStatus(`✅ ${data.name}: hemat ${formatRupiah(data.discount)}`, true);
+      setPromoStatus(`${data.name}: hemat ${formatRupiah(data.discount)}`, true);
     } catch (err) {
       const code = appliedPromo.code;
       removePromoCode();
-      setPromoStatus(`❌ Kupon ${code} dilepas: ${err.message}`, false);
+      setPromoStatus(`Kupon ${code} dilepas: ${err.message}`, false);
     }
     renderCartTotals();
   }, 400);
@@ -502,13 +502,13 @@ async function submitCheckout(e) {
         : null;
       alert('Gagal: ' + (firstError || result.message));
       submitBtn.disabled = false;
-      submitBtn.innerText = 'Kirim Pesanan Sekarang 🚀';
+      submitBtn.innerHTML = 'Kirim Pesanan Sekarang ' + icon('send');
       checkoutInProgress = false;
     }
   } catch (err) {
     alert('Terjadi kesalahan koneksi server: ' + err.message);
     submitBtn.disabled = false;
-    submitBtn.innerText = 'Kirim Pesanan Sekarang 🚀';
+    submitBtn.innerHTML = 'Kirim Pesanan Sekarang ' + icon('send');
     checkoutInProgress = false;
   }
 }
@@ -517,7 +517,7 @@ function formatRupiah(number) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
 }
 
-function showToast(msg) {
+function showToast(msg, iconName = 'sparkles') {
   let container = document.getElementById('toastContainer');
   if (!container) {
     container = document.createElement('div');
@@ -528,7 +528,7 @@ function showToast(msg) {
 
   const toast = document.createElement('div');
   toast.className = 'toast';
-  toast.innerHTML = `<span>✨</span> <span>${msg}</span>`;
+  toast.innerHTML = `${icon(iconName)} <span>${msg}</span>`;
   container.appendChild(toast);
 
   setTimeout(() => {
@@ -597,7 +597,7 @@ function openProductPreview(event, product) {
   if (imgWrap) {
     const imgHtml = product.image
       ? `<img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}" style="width:100%; height:100%; object-fit:cover;">`
-      : `<div class="card-product-img-placeholder ${meta.isFood ? 'ph-food' : 'ph-drink'}" style="width:100%; height:100%;"><span class="ph-emoji">${meta.isFood ? '🍲' : '🥤'}</span></div>`;
+      : `<div class="card-product-img-placeholder ${meta.isFood ? 'ph-food' : 'ph-drink'}" style="width:100%; height:100%;"><span class="ph-icon">${icon(meta.isFood ? 'soup' : 'cup-soda')}</span></div>`;
     imgWrap.innerHTML = `
       ${imgHtml}
       <span class="brand-badge ${meta.isFood ? 'badge-food' : 'badge-drink'} img-badge">${escapeHtml(product.category || '')}</span>
@@ -606,7 +606,7 @@ function openProductPreview(event, product) {
   }
 
   document.getElementById('previewTitle').innerText = product.name;
-  document.getElementById('previewRating').innerHTML = `<span class="pv-star">&#9733;</span> ${meta.rating} &middot; ${meta.reviews}+ ulasan${product.badge ? ' &middot; ' + escapeHtml(product.badge) : ''}`;
+  document.getElementById('previewRating').innerHTML = `<span class="pv-star">${icon('star')}</span> ${meta.rating} &middot; ${meta.reviews}+ ulasan${product.badge ? ' &middot; ' + escapeHtml(product.badge) : ''}`;
   document.getElementById('previewPrice').innerText = formatRupiah(product.price);
   document.getElementById('previewStock').innerText = `Stok ${product.stock}`;
   const descEl = document.getElementById('previewDesc');
@@ -683,14 +683,14 @@ const PREF_KEYWORDS = {
 };
 
 const PREF_LABELS = {
-  pedas: 'Pedas & Gurih 🌶️',
-  gurih: 'Gurih / Crispy 🍗',
-  manis: 'Manis & Legit 🍯',
-  hangat: 'Kuah Rempah Hangat 🍲',
-  segar: 'Dingin & Segar 🧊',
-  kopi: 'Kopi Mantap ☕',
-  creamy: 'Creamy & Susu 🥛',
-  buah: 'Jus Buah Asli 🥭'
+  pedas: 'Pedas & Gurih',
+  gurih: 'Gurih / Crispy',
+  manis: 'Manis & Legit',
+  hangat: 'Kuah Rempah Hangat',
+  segar: 'Dingin & Segar',
+  kopi: 'Kopi Mantap',
+  creamy: 'Creamy & Susu',
+  buah: 'Jus Buah Asli'
 };
 
 const FOOD_PREFS = new Set(['pedas', 'gurih', 'manis', 'hangat']);
@@ -959,7 +959,7 @@ function applyPreferenceRecommendations(tags, shouldScroll) {
 
     const imgHtml = p.imageUrl
       ? `<img src="${escapeHtml(p.imageUrl)}" alt="${escapeHtml(p.name)}" loading="lazy">`
-      : `<div class="card-product-img card-product-img-placeholder ${isFood ? 'ph-food' : 'ph-drink'}" style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:2.2rem;"><span>${isFood ? '🍲' : '🥤'}</span></div>`;
+      : `<div class="card-product-img card-product-img-placeholder ${isFood ? 'ph-food' : 'ph-drink'}" style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:2.2rem;"><span class="ph-icon">${icon(isFood ? 'soup' : 'cup-soda')}</span></div>`;
 
     return `
       <div class="rec-card" style="cursor:pointer;" onclick="openPrefProductPreview(event, ${p.id})">
@@ -995,7 +995,7 @@ function applyPreferenceRecommendations(tags, shouldScroll) {
     setTimeout(() => {
       section.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 120);
-    showToast('🎯 Rekomendasi selera Anda telah diperbarui!');
+    showToast('Rekomendasi selera Anda telah diperbarui!', 'target');
   }
 }
 

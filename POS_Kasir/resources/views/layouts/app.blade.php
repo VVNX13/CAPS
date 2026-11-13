@@ -22,6 +22,20 @@
 <body class="@yield('body-class')">
     @yield('content')
 
+    <script>
+        // Line icons for client-rendered markup; same set as the Blade icon component (App\Support\Icon).
+        window.__ICONS__ = @json(\App\Support\Icon::PATHS);
+        function icon(name, cls) {
+            return '<svg class="icon icon-' + name + (cls ? ' ' + cls : '') + '" viewBox="0 0 24 24" fill="none" stroke="currentColor"'
+                + ' stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">'
+                + (window.__ICONS__[name] || '') + '</svg>';
+        }
+        // Icon followed by escaped text — for status lines that carry server messages.
+        function iconText(name, text) {
+            const safe = String(text ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+            return icon(name) + ' <span>' + safe + '</span>';
+        }
+    </script>
     <script src="{{ asset_versioned('assets/js/csrf.js') }}"></script>
     <script src="{{ asset_versioned('assets/js/pwa.js') }}"></script>
     <script src="{{ asset_versioned('assets/js/nav.js') }}"></script>

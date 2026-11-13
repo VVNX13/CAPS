@@ -6,13 +6,12 @@
     @include('owner.partials.navbar', [
         'current' => 'qris',
         'title' => 'QRIS Dinamis',
-        'icon' => '📱',
     ])
 
     <main class="container">
         <!-- Info Banner -->
         <div class="info-card">
-            <div style="font-size: 2rem; flex-shrink: 0;">💳</div>
+            <span class="icon-chip icon-chip-lg icon-chip-blue"><x-icon name="credit-card" /></span>
             <div>
                 <h2 style="font-size: 1.15rem; font-weight: 800; color: #1e3a8a; margin-bottom: 4px;">QRIS-ify Gateway (Verified Auto-Paid) + Fallback QR Dinamis Lokal</h2>
                 <p style="font-size: 0.85rem; color: #475569; line-height: 1.5;">
@@ -25,14 +24,14 @@
         <div class="card p-4" style="margin-bottom: 24px; border: 2px solid #10b981; box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.1);">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
                 <div style="display:flex; align-items:center; gap:10px;">
-                    <span style="font-size:1.5rem;">⚡</span>
+                    <span class="icon-chip icon-chip-green" style="color:#059669; background:#d1fae5;"><x-icon name="zap" /></span>
                     <div>
                         <h3 style="font-size: 1.05rem; font-weight: 800; color: #0f172a; margin:0;">QRIS-ify API Gateway (Auto-Verified)</h3>
                         <p style="font-size: 0.8rem; color: #64748b; margin: 2px 0 0;">Bayar QRIS → LUNAS otomatis. Tanpa klik kasir.</p>
                     </div>
                 </div>
                 <div style="display:flex; align-items:center; gap:8px;">
-                    <span id="qrisifyStatusBadge" class="brand-badge" style="background:#d1fae5; color:#059669;">⚡ Active</span>
+                    <span id="qrisifyStatusBadge" class="brand-badge" style="background:#d1fae5; color:#059669;"><x-icon name="zap" /> Active</span>
                     <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:0.85rem; font-weight:600;">
                         <input type="checkbox" id="qrisifyToggle" onchange="toggleQrisify(this)" style="width:18px; height:18px;">
                         Aktifkan QRIS-ify
@@ -44,15 +43,15 @@
                     <label class="form-label" for="qrisifyApiKeyInput" style="font-size:0.8rem;">API Key (dari dashboard QRIS-ify):</label>
                     <div style="display:flex; gap:6px;">
                         <input type="password" id="qrisifyApiKeyInput" class="form-control" placeholder="qris_live_..." style="font-family:monospace; font-size:0.8rem;">
-                        <button type="button" class="btn btn-outline btn-sm" onclick="toggleApiKeyVisibility()">👁️</button>
+                        <button type="button" class="btn btn-outline btn-sm" onclick="toggleApiKeyVisibility()" aria-label="Tampilkan API Key"><x-icon name="eye" /></button>
                     </div>
                 </div>
                 <div style="display:flex; align-items:flex-end; gap:8px; flex-wrap:wrap;">
                     <button type="button" class="btn btn-success" onclick="saveQrisifySettings()" style="flex:1;">
-                        💾 Simpan API Key
+                        <x-icon name="save" /> Simpan API Key
                     </button>
                     <a href="https://qrisify.adihub.my.id" target="_blank" class="btn btn-outline btn-sm">
-                        🔗 Dashboard QRIS-ify
+                        <x-icon name="external-link" /> Dashboard QRIS-ify
                     </a>
                 </div>
             </div>
@@ -62,13 +61,13 @@
         <div class="qris-grid">
             <!-- Left: Settings Form -->
             <div class="card p-4">
-                <h3 style="font-size: 1.05rem; font-weight: 800; margin-bottom: 16px; color: #0f172a;">⚙️ Payload QRIS Statis Toko Anda</h3>
+                <h3 style="font-size: 1.05rem; font-weight: 800; margin-bottom: 16px; color: #0f172a;" class="with-icon"><x-icon name="sliders" /> Payload QRIS Statis Toko Anda</h3>
 
                 <!-- QRIS Physical Image Preview (from uploaded merchant file) -->
                 <div id="qrisPhysicalPreview" style="text-align:center; margin-bottom:16px; padding:14px; background:#fefce8; border:1px dashed #f59e0b; border-radius:12px;">
-                    <div style="font-size:0.75rem; font-weight:700; color:#92400e; margin-bottom:8px;">📸 QRIS Fisik Merchant (Auto-decoded dari foto Anda)</div>
+                    <div style="font-size:0.75rem; font-weight:700; color:#92400e; margin-bottom:8px;"><x-icon name="camera" /> QRIS Fisik Merchant (Auto-decoded dari foto Anda)</div>
                     <img src="{{ asset_versioned('assets/images/merchant_qris.jpg') }}" alt="QRIS Fisik Merchant" style="max-width:180px; border-radius:10px; border:2px solid #f59e0b; box-shadow:0 2px 8px rgba(0,0,0,0.1);">
-                    <div style="font-size:0.72rem; color:#78350f; margin-top:6px;">✅ String QRIS berhasil dibaca otomatis dari foto ini</div>
+                    <div style="font-size:0.72rem; color:#78350f; margin-top:6px;"><x-icon name="check-circle" /> String QRIS berhasil dibaca otomatis dari foto ini</div>
                 </div>
 
                 <form onsubmit="saveQrisSettings(event)">
@@ -76,16 +75,16 @@
                         <label class="form-label" for="staticQrisInput">Raw String QRIS Statis (EMVCo Payload):</label>
                         <textarea id="staticQrisInput" class="form-control" rows="4" placeholder="00020101021126600014ID.LINKAJA.WWW..." required style="font-family: monospace; font-size: 0.78rem; word-break: break-all;"></textarea>
                         <span style="font-size: 0.75rem; color: #64748b; margin-top: 4px; display: block;">
-                            💡 String di atas didapat otomatis dari foto QRIS fisik toko Anda. Anda bisa memperbaruinya kapan saja jika QRIS berubah.
+                            <x-icon name="lightbulb" /> String di atas didapat otomatis dari foto QRIS fisik toko Anda. Anda bisa memperbaruinya kapan saja jika QRIS berubah.
                         </span>
                     </div>
 
                     <div style="display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap;">
                         <button type="submit" id="btnSaveQris" class="btn btn-primary" style="flex: 1;">
-                            💾 Simpan &amp; Aktifkan QRIS
+                            <x-icon name="save" /> Simpan &amp; Aktifkan QRIS
                         </button>
                         <button type="button" class="btn btn-outline" onclick="resetDefaultQris()">
-                            🔄 Reset ke QRIS Toko
+                            <x-icon name="refresh" /> Reset ke QRIS Toko
                         </button>
                     </div>
                 </form>
@@ -93,19 +92,19 @@
                 <!-- Parsed Info Box -->
                 <div id="parsedInfoBox" style="margin-top: 16px; padding: 14px; background: #f0fdf4; border-radius: 12px; border: 1px solid #86efac; display: none;">
                     <div style="display:flex; align-items:center; gap:6px; font-weight: 800; font-size: 0.85rem; color: #166534; margin-bottom: 10px;">
-                        <span>✅</span> QRIS Terverifikasi &amp; Aktif
+                        <x-icon name="check-circle" /> QRIS Terverifikasi &amp; Aktif
                     </div>
                     <div style="font-size: 0.85rem; line-height: 1.9; color:#15803d;">
-                        <div>🏪 Merchant: <strong id="parsedMerchantName" style="color: #166534;">-</strong></div>
-                        <div>📍 Kota: <strong id="parsedCity">-</strong></div>
-                        <div>📮 Kode Pos: <strong id="parsedPostal">-</strong></div>
+                        <div><x-icon name="store" /> Merchant: <strong id="parsedMerchantName" style="color: #166534;">-</strong></div>
+                        <div><x-icon name="map-pin" /> Kota: <strong id="parsedCity">-</strong></div>
+                        <div><x-icon name="mail" /> Kode Pos: <strong id="parsedPostal">-</strong></div>
                     </div>
                 </div>
             </div>
 
             <!-- Right: Dynamic Simulator & Tester -->
             <div class="card p-4">
-                <h3 style="font-size: 1.05rem; font-weight: 800; margin-bottom: 16px; color: #0f172a;">🧪 Simulator &amp; Uji Dynamic QRIS</h3>
+                <h3 style="font-size: 1.05rem; font-weight: 800; margin-bottom: 16px; color: #0f172a;" class="with-icon"><x-icon name="flask" /> Simulator &amp; Uji Dynamic QRIS</h3>
                 <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 14px;">
                     Uji coba generate QRIS dengan nominal tertentu dan scan dengan aplikasi e-Wallet (BCA, GoPay, OVO, Dana, ShopeePay) untuk memastikan nominal otomatis terkunci.
                 </p>
@@ -116,7 +115,7 @@
                         <input type="number" id="testAmount" class="form-control" value="25000" min="1000" step="500">
                     </div>
                     <button type="button" class="btn btn-success" onclick="testGenerateQris()">
-                        ⚡ Generate Dynamic QR
+                        <x-icon name="zap" /> Generate Dynamic QR
                     </button>
                 </div>
 
@@ -131,7 +130,7 @@
                         <img id="testQrImage" src="" alt="Dynamic QRIS" style="width: 200px; height: 200px; border-radius: 12px; margin: 12px auto; display: block; background: #fff; padding: 8px; border: 1px solid #e2e8f0; box-shadow: var(--shadow-sm);">
 
                         <div style="font-size: 1.25rem; font-weight: 800; color: #2563eb;" id="testFormattedAmount">Rp 25.000</div>
-                        <div style="font-size: 0.75rem; color: #059669; font-weight: 700; margin-top: 2px;">✅ Tag 54 &amp; CRC16 Valid</div>
+                        <div style="font-size: 0.75rem; color: #059669; font-weight: 700; margin-top: 2px;"><x-icon name="check-circle" /> Tag 54 &amp; CRC16 Valid</div>
 
                         <div style="margin-top: 14px; text-align: left; background: #fff; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 0.75rem; font-family: monospace; word-break: break-all;" id="testDynamicString"></div>
                     </div>
@@ -144,7 +143,7 @@
             <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
                 <div>
                     <div style="display:flex; align-items:center; gap:8px;">
-                        <span style="font-size:1.5rem;">🔌</span>
+                        <span class="icon-chip icon-chip-blue"><x-icon name="plug" /></span>
                         <h3 style="font-size: 1.2rem; font-weight: 800; color: #0f172a; margin:0;">Integrasi API Webhook Otomatis (Auto-Lunas)</h3>
                     </div>
                     <p style="font-size: 0.85rem; color: #64748b; margin-top: 4px;">
@@ -152,20 +151,20 @@
                     </p>
                 </div>
                 <span class="brand-badge badge-food" style="background:#eff6ff; color:#2563eb; font-size:0.75rem; border:1px solid #bfdbfe;">
-                    ⚡ Universal Webhook Active
+                    <x-icon name="zap" /> Universal Webhook Active
                 </span>
             </div>
 
             <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:20px;">
                 <!-- Left: Webhook Credentials -->
                 <div style="background:#f8fafc; padding:18px; border-radius:14px; border:1px solid #e2e8f0;">
-                    <h4 style="font-size:0.95rem; font-weight:700; color:#334155; margin-bottom:14px;">🔑 Kredensial Webhook</h4>
+                    <h4 style="font-size:0.95rem; font-weight:700; color:#334155; margin-bottom:14px;" class="with-icon"><x-icon name="key" /> Kredensial Webhook</h4>
 
                     <div class="form-group mb-3">
                         <label class="form-label" for="webhookUrlInput" style="font-size:0.8rem;">Endpoint URL Webhook (POST):</label>
                         <div style="display:flex; gap:6px;">
                             <input type="text" id="webhookUrlInput" class="form-control" readonly style="font-family:monospace; font-size:0.8rem; background:#fff;">
-                            <button type="button" class="btn btn-outline btn-sm" onclick="copyToClipboard('webhookUrlInput', 'URL Webhook disalin!')">📋 Salin</button>
+                            <button type="button" class="btn btn-outline btn-sm" onclick="copyToClipboard('webhookUrlInput', 'URL Webhook disalin!')"><x-icon name="copy" /> Salin</button>
                         </div>
                     </div>
 
@@ -178,24 +177,24 @@
                         <label class="form-label" for="webhookSecretInput" style="font-size:0.8rem;">Webhook Secret Key:</label>
                         <div style="display:flex; gap:6px;">
                             <input type="password" id="webhookSecretInput" class="form-control" style="font-family:monospace; font-size:0.8rem; background:#fff;">
-                            <button type="button" class="btn btn-outline btn-sm" onclick="toggleSecretVisibility()">👁️</button>
-                            <button type="button" class="btn btn-outline btn-sm" onclick="copyToClipboard('webhookSecretInput', 'Secret disalin!')">📋 Salin</button>
+                            <button type="button" class="btn btn-outline btn-sm" onclick="toggleSecretVisibility()" aria-label="Tampilkan secret"><x-icon name="eye" /></button>
+                            <button type="button" class="btn btn-outline btn-sm" onclick="copyToClipboard('webhookSecretInput', 'Secret disalin!')"><x-icon name="copy" /> Salin</button>
                         </div>
                     </div>
 
                     <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;">
                         <button type="button" class="btn btn-primary btn-sm" onclick="saveCustomSecret()" style="font-size:0.78rem;">
-                            💾 Simpan Secret
+                            <x-icon name="save" /> Simpan Secret
                         </button>
                         <button type="button" class="btn btn-outline btn-sm" onclick="regenerateSecretKey()" style="font-size:0.78rem;">
-                            🔄 Buat Secret Acak Baru
+                            <x-icon name="refresh" /> Buat Secret Acak Baru
                         </button>
                     </div>
                 </div>
 
                 <!-- Right: Simulator / Direct Tester -->
                 <div style="background:#f0fdf4; padding:18px; border-radius:14px; border:1px solid #bbf7d0;">
-                    <h4 style="font-size:0.95rem; font-weight:700; color:#166534; margin-bottom:14px;">🧪 Simulator / Tester Webhook</h4>
+                    <h4 style="font-size:0.95rem; font-weight:700; color:#166534; margin-bottom:14px;" class="with-icon"><x-icon name="flask" /> Simulator / Tester Webhook</h4>
                     <p style="font-size:0.8rem; color:#15803d; margin-bottom:12px;">
                         Uji coba kirim sinyal webhook langsung untuk melunasi salah satu pesanan secara otomatis:
                     </p>
@@ -206,7 +205,7 @@
                     </div>
 
                     <button type="button" class="btn btn-success" style="width:100%; margin-top:6px;" onclick="runWebhookTest()">
-                        🚀 Kirim Sinyal Webhook (Tandai Lunas)
+                        <x-icon name="send" /> Kirim Sinyal Webhook (Tandai Lunas)
                     </button>
 
                     <div id="webhookTestResult" style="margin-top:14px; display:none; padding:12px; border-radius:8px; font-family:monospace; font-size:0.75rem; word-break:break-all;"></div>
@@ -215,7 +214,7 @@
 
             <!-- Bottom: Quick Android / Gateway Guide -->
             <div style="margin-top:20px; padding:16px; background:#fff; border-radius:12px; border:1px dashed #cbd5e1;">
-                <div style="font-weight:700; font-size:0.85rem; color:#334155; margin-bottom:6px;">📱 Panduan Menghubungkan ke HP Kasir (Otomatis 100%):</div>
+                <div style="font-weight:700; font-size:0.85rem; color:#334155; margin-bottom:6px;"><x-icon name="smartphone" /> Panduan Menghubungkan ke HP Kasir (Otomatis 100%):</div>
                 <div style="font-size:0.8rem; color:#475569; line-height:1.6;">
                     1. Pasang aplikasi pembaca notifikasi di HP tempat akun GoPay / BCA Merchant terpasang (misal: <em>MacroDroid</em> atau <em>Tasker</em>).<br>
                     2. Buat pemicu (trigger): Saat ada notifikasi dari GoPay / BCA dengan kata kunci <em>"Pembayaran diterima"</em>.<br>
@@ -279,17 +278,17 @@
                 });
                 const data = await res.json();
                 if (data.success) {
-                    alert('✅ ' + data.message);
+                    alert(data.message);
                     displayParsedInfo(data.data.details);
                     testGenerateQris();
                 } else {
-                    alert('❌ ' + data.message);
+                    alert('Gagal: ' + data.message);
                 }
             } catch (err) {
                 alert('Gagal simpan: ' + err.message);
             } finally {
                 btn.disabled = false;
-                btn.innerText = '💾 Simpan & Aktifkan QRIS';
+                btn.innerHTML = icon('save') + ' Simpan &amp; Aktifkan QRIS';
             }
         }
 
@@ -361,11 +360,11 @@
             if (enabled) {
                 badge.style.background = '#d1fae5';
                 badge.style.color = '#059669';
-                badge.innerText = '⚡ Active';
+                badge.innerHTML = icon('zap') + ' Active';
             } else {
                 badge.style.background = '#fee2e2';
                 badge.style.color = '#dc2626';
-                badge.innerText = '⏸ Disabled';
+                badge.innerHTML = icon('pause') + ' Disabled';
             }
         }
 
@@ -398,13 +397,13 @@
                     resultBox.style.background = '#ecfdf5';
                     resultBox.style.border = '1px solid #10b981';
                     resultBox.style.color = '#065f46';
-                    resultBox.innerText = '✅ ' + data.message;
+                    resultBox.innerHTML = iconText('check-circle', data.message);
                     updateQrisifyBadge(enabled);
                 } else {
                     resultBox.style.background = '#fef2f2';
                     resultBox.style.border = '1px solid #f87171';
                     resultBox.style.color = '#991b1b';
-                    resultBox.innerText = '❌ Gagal menyimpan: ' + data.message;
+                    resultBox.innerHTML = iconText('x-circle', 'Gagal menyimpan: ' + data.message);
                 }
             } catch (e) {
                 resultBox.innerText = 'Error: ' + e.message;
@@ -440,10 +439,10 @@
             input.select();
             input.setSelectionRange(0, 99999);
             navigator.clipboard.writeText(input.value).then(() => {
-                alert('📋 ' + (successMsg || 'Disalin ke clipboard!'));
+                alert(successMsg || 'Disalin ke clipboard!');
             }).catch(() => {
                 document.execCommand('copy');
-                alert('📋 ' + (successMsg || 'Disalin ke clipboard!'));
+                alert(successMsg || 'Disalin ke clipboard!');
             });
         }
 
@@ -462,9 +461,9 @@
                 });
                 const data = await res.json();
                 if (data.success) {
-                    alert('✅ ' + data.message);
+                    alert(data.message);
                 } else {
-                    alert('❌ ' + data.message);
+                    alert('Gagal: ' + data.message);
                 }
             } catch (e) {
                 alert('Error: ' + e.message);
@@ -479,7 +478,7 @@
                 const data = await res.json();
                 if (data.success) {
                     document.getElementById('webhookSecretInput').value = data.data.webhook_secret;
-                    alert('✅ Webhook Secret baru berhasil dibuat!');
+                    alert('Webhook Secret baru berhasil dibuat!');
                 }
             } catch (e) {
                 alert('Error: ' + e.message);
@@ -520,12 +519,12 @@
                     resultBox.style.background = '#ecfdf5';
                     resultBox.style.border = '1px solid #10b981';
                     resultBox.style.color = '#065f46';
-                    resultBox.innerHTML = `<strong>✅ SUKSES (HTTP 200)</strong><br>${data.message}<br><br>Data Response:<br>${JSON.stringify(data.data, null, 2)}`;
+                    resultBox.innerHTML = `<strong class="with-icon">${icon('check-circle')} SUKSES (HTTP 200)</strong><br>${data.message}<br><br>Data Response:<br>${JSON.stringify(data.data, null, 2)}`;
                 } else {
                     resultBox.style.background = '#fef2f2';
                     resultBox.style.border = '1px solid #f87171';
                     resultBox.style.color = '#991b1b';
-                    resultBox.innerHTML = `<strong>❌ GAGAL (${res.status})</strong><br>${data.message}`;
+                    resultBox.innerHTML = `<strong class="with-icon">${icon('x-circle')} GAGAL (${res.status})</strong><br>${data.message}`;
                 }
             } catch (err) {
                 resultBox.style.background = '#fef2f2';

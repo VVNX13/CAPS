@@ -7,13 +7,13 @@
         <div class="navbar-container">
             <div style="display:flex; align-items:center; gap:10px;">
                 <a href="{{ route('menu') }}" class="brand-logo">
-                    <span>🧾</span>
+                    <span class="icon-chip icon-chip-green"><x-icon name="receipt" /></span>
                     <span class="brand-title-text">Riwayat Pesanan</span>
                 </a>
             </div>
 
             <div class="owner-nav-actions">
-                <a href="{{ route('menu') }}" class="btn btn-primary btn-sm">☕ Pesan Lagi</a>
+                <a href="{{ route('menu') }}" class="btn btn-primary btn-sm"><x-icon name="coffee" /> Pesan Lagi</a>
             </div>
         </div>
     </header>
@@ -21,7 +21,7 @@
     <main class="container" style="max-width:720px;">
         <div class="owner-welcome-card">
             <div>
-                <h2 style="font-size:1.2rem; font-weight:800; color:#0f172a;">Cek pesanan Anda 🔎</h2>
+                <h2 style="font-size:1.2rem; font-weight:800; color:#0f172a;">Cek pesanan Anda</h2>
                 <p style="font-size:0.85rem; color:#64748b; margin-top:2px;">
                     Masukkan nomor WhatsApp yang Anda pakai saat memesan.
                 </p>

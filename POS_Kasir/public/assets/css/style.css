@@ -627,7 +627,7 @@ body {
   object-fit: cover;
 }
 
-/* Shown when a menu item has no photo. Drawn with CSS and an emoji so it needs
+/* Shown when a menu item has no photo. Drawn with CSS and an inline SVG icon so it needs
    no network: the menu stays complete offline, and nothing implies a dish the
    cafe does not actually serve. */
 .card-product-img-placeholder {
@@ -644,7 +644,7 @@ body {
 .card-product-img-placeholder.ph-drink {
   background: linear-gradient(135deg, #ecfeff 0%, #a5f3fc 100%);
 }
-.card-product-img-placeholder .ph-emoji {
+.card-product-img-placeholder .ph-icon {
   filter: drop-shadow(0 2px 4px rgba(15, 23, 42, 0.15));
 }
 .img-badge {
@@ -2462,7 +2462,11 @@ body.auth-body {
     color: rgb(255 255 255 / 0.85);
   }
   .auth-brand-points li::before {
-    content: "✓";
+    content: "";
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 11px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -2699,3 +2703,65 @@ body.auth-body {
 .pref-fade-in {
   animation: prefFadeIn 0.28s ease-out;
 }
+
+/* ── Line icons (App\Support\Icon / <x-icon> / icon() in JS) ──────────────── */
+.icon {
+  width: 1em;
+  height: 1em;
+  display: inline-block;
+  vertical-align: -0.14em;
+  flex-shrink: 0;
+}
+.with-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+}
+.icon-empty-state {
+  width: 2.5rem;
+  height: 2.5rem;
+  display: block;
+  margin: 0 auto 10px;
+  color: #94a3b8;
+}
+.icon-hero-success {
+  width: 3rem;
+  height: 3rem;
+  display: block;
+  margin: 0 auto 8px;
+  color: #10b981;
+}
+.icon-chip {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 1.1rem;
+}
+.icon-chip-lg { width: 44px; height: 44px; border-radius: 12px; font-size: 1.4rem; }
+.icon-chip-green { background: var(--primary-light, #e8f0e9); color: var(--accent, #25382d); }
+.icon-chip-blue { background: #dbeafe; color: #1d4ed8; }
+.icon-chip-amber { background: #fef3c7; color: #b45309; }
+.card-product-img-placeholder.ph-food .ph-icon { color: #c2410c; }
+.card-product-img-placeholder.ph-drink .ph-icon { color: #0e7490; }
+.card-product-img-placeholder .ph-icon .icon { stroke-width: 1.6; }
+.alert-inline {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.alert-inline > .icon { margin-top: 0.15em; }
+.search-icon { display: flex; }
+.form-section-title { display: flex; align-items: center; gap: 8px; }
+.form-section-title .icon { color: var(--accent, #25382d); }
+.promo-status { display: flex; align-items: center; gap: 6px; }
+.promo-status:empty { display: none; }
+.pv-star .icon,
+.rec-card-badge .icon-star,
+.rec-header-badge .icon-star { fill: currentColor; }
+.pref-chip-emoji .icon { color: var(--accent, #25382d); }
+.toast .icon { width: 1.1em; height: 1.1em; color: #fbbf24; }
+.ph-icon { display: flex; }

@@ -428,7 +428,7 @@ class ProductImageTest extends TestCase
         // both needed the network and misrepresented the dish.
         $this->assertStringNotContainsString('images.unsplash.com', $html);
         $this->assertStringContainsString('card-product-img-placeholder', $html);
-        $this->assertStringContainsString('🍲', $html);
+        $this->assertStringContainsString('icon-soup', $html);
     }
 
     public function test_customer_menu_shows_drink_placeholder_for_drinks(): void
@@ -441,7 +441,7 @@ class ProductImageTest extends TestCase
         $html = $this->get('/')->assertOk()->getContent();
 
         $this->assertStringContainsString('ph-drink', $html);
-        $this->assertStringContainsString('🥤', $html);
+        $this->assertStringContainsString('icon-cup-soda', $html);
     }
 
     public function test_uploaded_photo_reaches_the_customer_menu(): void

@@ -25,7 +25,7 @@
     <header class="navbar no-print">
         <div class="navbar-container">
             <a href="{{ route('menu') }}" class="brand-logo">
-                <span>🍽️</span> {{ config('app.name') }}
+                <span class="icon-chip icon-chip-green"><x-icon name="utensils" /></span> {{ config('app.name') }}
             </a>
             <div class="nav-actions">
                 <a href="{{ route('menu') }}" class="btn btn-outline btn-sm">&larr; Menu Utama</a>
@@ -42,7 +42,7 @@
                         <span style="font-size: 1.3rem; font-weight: 900; color: #dc2626; letter-spacing: 1px;">QRIS</span>
                         <span style="font-size: 0.75rem; color: #475569; font-weight: 600;">QR Code Standar Pembayaran Nasional</span>
                     </div>
-                    <div class="qris-timer" id="qrisTimerBadge">⏱️ Sisa Waktu: <strong id="countdown" data-remaining-seconds="{{ $remainingSeconds }}">{{ $countdownInitial }}</strong></div>
+                    <div class="qris-timer" id="qrisTimerBadge"><x-icon name="clock" /> Sisa Waktu: <strong id="countdown" data-remaining-seconds="{{ $remainingSeconds }}">{{ $countdownInitial }}</strong></div>
                 </div>
 
                 <div class="qris-qr-wrapper">
@@ -61,7 +61,7 @@
                         </div>
                     @endif
                     <div style="font-size: 0.75rem; color: #059669; font-weight: 700; margin-top: 2px;">
-                        ✨ QRIS-ify: Nominal pas otomatis terisi saat di-scan
+                        <x-icon name="sparkles" /> QRIS-ify: Nominal pas otomatis terisi saat di-scan
                     </div>
                 </div>
 
@@ -87,7 +87,7 @@
                     </div>
                     <div style="display:flex; gap:8px; margin-top:4px;">
                         <button type="button" class="btn btn-outline btn-sm" onclick="checkPaymentStatusNow()" style="font-size:0.75rem; padding:4px 10px;">
-                            🔄 Periksa Ulang Status
+                            <x-icon name="refresh" /> Periksa Ulang Status
                         </button>
                     </div>
                 </div>
@@ -96,7 +96,7 @@
 
         @if ($sale->isCanceled())
             <div class="no-print" role="alert" style="background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; padding:12px 14px; border-radius:12px; margin-bottom:14px; font-size:0.85rem;">
-                <strong>❌ Pesanan ini telah dibatalkan</strong>
+                <strong class="with-icon"><x-icon name="x-circle" /> Pesanan ini telah dibatalkan</strong>
                 @if ($sale->canceled_at)
                     <span style="color:#7f1d1d;">({{ $sale->canceled_at->format('d/m/Y H:i') }})</span>
                 @endif
@@ -110,7 +110,7 @@
         <div class="receipt-box" id="thermalReceipt">
             <!-- Header Struk -->
             <div style="text-align:center;">
-                <div style="font-size:2.2rem; margin-bottom:4px;">🏪</div>
+                <div style="font-size:2.2rem; margin-bottom:4px; color:#0f172a;"><x-icon name="store" /></div>
                 <h2 style="font-size:1.3rem; font-weight:800; color:#0f172a;">{{ config('app.name') }}</h2>
                 <p style="font-size:0.8rem; color:#64748b;">1 QR Code Self-Order &amp; POS</p>
                 <div class="receipt-divider"></div>
@@ -147,13 +147,19 @@
                 <div style="display:flex; justify-content:space-between;">
                     <span style="color:#64748b;">Status Bayar:</span>
                     <strong id="receiptPaymentStatus" style="color:{{ $sale->isPaid() ? '#059669' : '#dc2626' }};">
-                        {{ $sale->isPaid() ? '✅ LUNAS' : ($sale->isCanceled() ? '—' : '⏳ MENUNGGU PEMBAYARAN') }}
+                        @if ($sale->isPaid())
+                            <x-icon name="check-circle" /> LUNAS
+                        @elseif ($sale->isCanceled())
+                            —
+                        @else
+                            <x-icon name="clock" /> MENUNGGU PEMBAYARAN
+                        @endif
                     </strong>
                 </div>
                 @if ($sale->isCanceled())
                     <div style="display:flex; justify-content:space-between;">
                         <span style="color:#64748b;">Status Pesanan:</span>
-                        <strong style="color:#dc2626;">❌ DIBATALKAN</strong>
+                        <strong style="color:#dc2626;"><x-icon name="x-circle" /> DIBATALKAN</strong>
                     </div>
                 @endif
                 @if ($sale->notes)
@@ -181,7 +187,7 @@
                             </div>
                             @if (!empty($item['notes']))
                                 <div style="font-size:0.725rem; color:#92400e; background:#fef3c7; padding:2px 6px; border-radius:4px; display:inline-block; margin-top:3px;">
-                                    📝 {{ $item['notes'] }}
+                                    <x-icon name="file-text" /> {{ $item['notes'] }}
                                 </div>
                             @endif
                         </div>
@@ -241,11 +247,11 @@
                         <option value="80">Kertas 80mm</option>
                     </select>
                     <button type="button" onclick="printThermalReceipt()" class="btn btn-primary">
-                        🖨️ Cetak Struk
+                        <x-icon name="printer" /> Cetak Struk
                     </button>
                 </div>
                 <a href="https://api.whatsapp.com/send?phone={{ preg_replace('/^0/', '62', $sale->customer_phone) }}&text={{ urlencode('Halo ' . $sale->customer_name . ', berikut adalah struk digital pesanan Anda (' . $sale->invoice_number . '): ' . $receiptUrl) }}" target="_blank" class="btn btn-success" style="width:100%;">
-                    📲 Kirim Struk ke WhatsApp
+                    <x-icon name="message-circle" /> Kirim Struk ke WhatsApp
                 </a>
             </div>
         </div>
@@ -362,7 +368,7 @@
                         if (qrisBox) {
                             qrisBox.innerHTML = `
                                 <div style="text-align:center; padding:20px; background:#ecfdf5; border-radius:16px; border:2px solid #10b981;">
-                                    <div style="font-size:3rem; margin-bottom:6px;">🎉</div>
+                                    ${icon('check-circle', 'icon-hero-success')}
                                     <h3 style="color:#065f46; font-size:1.25rem; font-weight:800;">Pembayaran QRIS Berhasil!</h3>
                                     <p style="color:#047857; font-size:0.9rem; margin-top:4px;">Pesanan Anda telah diteruskan ke bagian dapur untuk segera diproses.</p>
                                 </div>
@@ -370,7 +376,7 @@
                         }
                         const statusEl = document.getElementById('receiptPaymentStatus');
                         if (statusEl) {
-                            statusEl.innerText = '✅ LUNAS';
+                            statusEl.innerHTML = icon('check-circle') + ' LUNAS';
                             statusEl.style.color = '#059669';
                         }
                         const printStatusEl = document.getElementById('tpPaymentStatus');
