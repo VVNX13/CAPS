@@ -50,8 +50,9 @@ class ProductImage
         if (self::isExternal($image)) {
             if ($name && str_contains($image, 'unsplash.com')) {
                 $local = self::localIllustrationFor($name);
-                if ($local) {
-                    return $local;
+                if ($local !== null) {
+                    // '' = a dish whose own photo is not in place yet: draw the placeholder.
+                    return $local === '' ? null : $local;
                 }
             }
             return $image;
@@ -60,13 +61,41 @@ class ProductImage
         return '/storage/'.$image;
     }
 
+    /**
+     * Dishes that must only ever show their own photo. Drop the file into
+     * public/assets/images/menu/ as <slug>.jpg|jpeg|png|webp and it is used;
+     * until then the menu shows the icon placeholder rather than a borrowed
+     * photo of a different dish.
+     */
+    public const DEDICATED_PHOTOS = [
+        'ayam bakar' => 'ayam-bakar-madu-pedas',
+        'tahu' => 'tahu-cabe-garam',
+        'cireng' => 'cireng-bumbu-rujak',
+        'mie goreng' => 'mie-goreng-seafood',
+        'buntut' => 'sop-buntut',
+        'berry' => 'berry-sunset-sparkler',
+        'alpukat' => 'jus-alpukat',
+        'mangga' => 'jus-mangga',
+    ];
+
+    /**
+     * Local photo for a seeded menu item: a URL, '' when the dish has a
+     * dedicated photo slot that is still empty, or null when nothing matches.
+     */
     public static function localIllustrationFor(string $name): ?string
     {
         $pName = strtolower($name);
+
+        foreach (self::DEDICATED_PHOTOS as $keyword => $slug) {
+            if (str_contains($pName, $keyword)) {
+                return self::menuPhoto($slug) ?? '';
+            }
+        }
+
         if (str_contains($pName, 'gula aren') || str_contains($pName, 'aren') || str_contains($pName, 'caramel') || str_contains($pName, 'kopi')) {
             return '/assets/images/ChatGPT-Image-Oct-2_-2026_-09_13_15-PM-2.png';
         }
-        if (str_contains($pName, 'v60') || str_contains($pName, 'gayo') || str_contains($pName, 'americano') || str_contains($pName, 'berry') || str_contains($pName, 'sparkler') || str_contains($pName, 'jus') || str_contains($pName, 'alpukat') || str_contains($pName, 'mangga')) {
+        if (str_contains($pName, 'v60') || str_contains($pName, 'gayo') || str_contains($pName, 'americano')) {
             return '/assets/images/ChatGPT-Image-Oct-2_-2026_-09_13_16-PM-3.png';
         }
         if (str_contains($pName, 'matcha')) {
@@ -75,18 +104,30 @@ class ProductImage
         if (str_contains($pName, 'nasi goreng')) {
             return '/assets/images/ChatGPT-Image-Oct-2_-2026_-09_13_19-PM-5.png';
         }
-        if (str_contains($pName, 'ayam bakar') || str_contains($pName, 'ayam') || str_contains($pName, 'croissant') || str_contains($pName, 'sandwich')) {
+        if (str_contains($pName, 'sandwich')) {
             return '/assets/images/ChatGPT-Image-Oct-2_-2026_-09_13_20-PM-6.png';
         }
-        if (str_contains($pName, 'mie') || str_contains($pName, 'seafood') || str_contains($pName, 'bakso')) {
+        if (str_contains($pName, 'croissant')) {
             return '/assets/images/ChatGPT-Image-Oct-2_-2026_-09_28_55-PM-1.png';
         }
-        if (str_contains($pName, 'sop') || str_contains($pName, 'buntut') || str_contains($pName, 'soto')) {
+        if (str_contains($pName, 'avocado toast') || str_contains($pName, 'roti alpukat')) {
             return '/assets/images/ChatGPT-Image-Oct-2_-2026_-09_28_56-PM-2.png';
         }
-        if (str_contains($pName, 'kentang') || str_contains($pName, 'truffle') || str_contains($pName, 'fries') || str_contains($pName, 'tahu') || str_contains($pName, 'cireng')) {
+        if (str_contains($pName, 'kentang') || str_contains($pName, 'truffle') || str_contains($pName, 'fries')) {
             return '/assets/images/ChatGPT-Image-Oct-2_-2026_-09_13_21-PM-7.png';
         }
+        return null;
+    }
+
+    private static function menuPhoto(string $slug): ?string
+    {
+        foreach (['jpg', 'jpeg', 'png', 'webp'] as $extension) {
+            $relative = "assets/images/menu/{$slug}.{$extension}";
+            if (is_file(public_path($relative))) {
+                return '/'.$relative;
+            }
+        }
+
         return null;
     }
 

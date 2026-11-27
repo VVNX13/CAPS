@@ -1,0 +1,135 @@
+﻿Issue ID,Issue Type,Summary,Description,Parent,Status,Sprint,Labels
+1,Epic,Autentikasi & Manajemen Pengguna,"Login multi-role, akun staf, dan hak akses per peran (kasir, owner, dapur).",,Done,,capstone
+2,Epic,Self-Order Pelanggan (QR Meja),"Pelanggan scan QR meja, memesan lewat menu digital, dan melihat riwayat pesanan.",,Done,,capstone
+3,Epic,Pembayaran & Transaksi Kasir,"Alur pembayaran QRIS/tunai, struk, diskon, pembatalan, dan rekap kas shift.",,Done,,capstone
+4,Epic,Dapur & Notifikasi Pesanan,Antrean pesanan dapur multi-owner dengan notifikasi real-time.,,Done,,capstone
+5,Epic,Manajemen Menu & Stok,"Kelola produk, kategori, gambar, dan stok.",,In Progress,,capstone
+6,Epic,Laporan & Analitik Owner,"Dashboard owner, statistik penjualan, dan ekspor laporan.",,Done,,capstone
+7,Epic,"UI/UX, QA & Rilis","Penyempurnaan tampilan, pengujian, deployment, dan dokumentasi capstone.",,In Progress,,capstone
+100,Story,Portal login multi-role + demo cepat,"Halaman login untuk admin_kasir, owner_makanan, owner_minuman dengan tombol demo cepat.
+
+Dikerjakan oleh: willsyh
+Commit: 46f17eb, 31 Okt 2026",1,Done,,capstone
+101,Story,Kelola akun kasir / staf,"Owner dapat menambah, mengubah, dan menonaktifkan akun kasir/staf.
+
+Dikerjakan oleh: Xirus79
+Commit: 7d4bbc2, 4 Nov 2026",1,Done,Sprint 2,capstone
+102,Story,Role dapur untuk proses pesanan,"Menambah role 'dapur' (migrasi users) yang khusus memproses pesanan masuk.
+
+Dikerjakan oleh: reynaldy234
+Commit: 1c986ae, 5 Nov 2026",1,Done,Sprint 2,capstone
+103,Story,Menu digital pelanggan bertema Taman Cafe,"Tampilan menu pelanggan dengan tema dan ilustrasi Taman Teras Cafe.
+
+Dikerjakan oleh: VVNX13
+Commit: c896c6c, dedbd24, Okt 2026",2,Done,,capstone
+104,Story,Sorting menu & catatan per item,"Pelanggan dapat mengurutkan menu dan menambahkan catatan untuk setiap item.
+
+Dikerjakan oleh: VVNX13
+Commit: 0ab2985, 22 Okt 2026",2,Done,,capstone
+105,Story,Riwayat pesanan pelanggan,"Pelanggan dapat melihat riwayat dan status pesanannya (CustomerHistoryController).
+
+Dikerjakan oleh: VVNX13
+Commit: f062d45, 13 Okt 2026",2,Done,,capstone
+106,Story,Rekomendasi produk berdasarkan preferensi,"Menampilkan rekomendasi menu sesuai preferensi/riwayat pelanggan.
+
+Dikerjakan oleh: reynaldy234
+Commit: aec0851, 5 Nov 2026",2,Done,Sprint 2,capstone
+107,Story,Pembayaran QRIS dinamis + webhook QRIS-ify,"QRIS dinamis dengan kode unik, verifikasi otomatis via webhook, fallback EMVCo CRC16.
+
+Dikerjakan oleh: VVNX13
+Commit: f062d45, 13 Okt 2026",3,Done,,capstone
+108,Story,Kalkulator uang kembalian,"Kasir memasukkan uang tunai dan sistem menghitung kembalian.
+
+Dikerjakan oleh: willsyh
+Commit: 5c53618, ea01ee7, 29 Okt 2026",3,Done,,capstone
+109,Story,Pencarian & filter antrean pesanan,"Kasir dapat mencari dan memfilter antrean pesanan.
+
+Dikerjakan oleh: willsyh
+Commit: ea01ee7, 29 Okt 2026",3,Done,,capstone
+110,Story,Format cetak struk thermal,"Struk dicetak dengan format printer thermal.
+
+Dikerjakan oleh: willsyh
+Commit: c9142f4, 29 Okt 2026",3,Done,,capstone
+111,Story,Batal pesanan di area kasir,"Kasir dapat membatalkan pesanan beserta alasan pembatalan.
+
+Dikerjakan oleh: willsyh
+Commit: ec10520, 2 Nov 2026",3,Done,Sprint 2,capstone
+112,Story,Potongan harga / diskon & kode promo,"Diskon per transaksi dan kode promo (promo_codes).
+
+Dikerjakan oleh: willsyh
+Commit: 3633167, 2 Nov 2026",3,Done,Sprint 2,capstone
+113,Story,Rekap kas shift (buka/tutup kasir),"Kasir membuka dan menutup shift dengan rekap kas (cash_shifts).
+
+Dikerjakan oleh: Xirus79
+Commit: 18b8021, 4 Nov 2026",3,Done,Sprint 2,capstone
+114,Story,Tagihan belum bayar,"Daftar tagihan yang belum dibayar beserta pelunasannya (ReceivableController).
+
+Dikerjakan oleh: reynaldy234
+Commit: 4f4ac2c, 5 Nov 2026",3,Done,Sprint 2,capstone
+115,Story,Perbaikan kalkulasi transaksi kasir,"Memperbaiki perhitungan total, diskon, dan kembalian di halaman kasir.
+
+Dikerjakan oleh: reynaldy234
+Commit: 4f4ac2c, 5 Nov 2026",3,Done,Sprint 2,capstone
+116,Story,Dashboard dapur multi-owner + polling real-time,"Pesanan dipisah otomatis untuk owner makanan dan minuman dengan polling antrean.
+
+Dikerjakan oleh: VVNX13
+Commit: f062d45, 13 Okt 2026",4,Done,,capstone
+117,Story,Notifikasi pesanan baru via Web Push (PWA),"Web Push (VAPID) ke smartphone owner/dapur saat ada pesanan baru.
+
+Dikerjakan oleh: VVNX13
+Commit: f062d45, 13 Okt 2026",4,Done,,capstone
+118,Story,Suara notifikasi pesanan masuk,"Bunyi notifikasi di dashboard dapur ketika ada pesanan baru.
+
+Dikerjakan oleh: reynaldy234
+Commit: 1c986ae, 5 Nov 2026",4,Done,Sprint 2,capstone
+119,Story,"Kelola menu: desain card, tambah/edit/nonaktifkan","Tampilan kelola menu berbentuk card dengan aksi tambah, edit, dan nonaktifkan produk.
+
+Dikerjakan oleh: reynaldy234
+Commit: 4f4ac2c, 5 Nov 2026",5,Done,Sprint 2,capstone
+120,Story,Manajemen stok produk,"Kasir/owner dapat memperbarui stok produk.
+
+Dikerjakan oleh: reynaldy234
+Commit: 4f4ac2c, 5 Nov 2026",5,Done,Sprint 2,capstone
+121,Story,Peringatan stok menipis,"Notifikasi/penanda saat stok produk di bawah batas minimum.
+
+Dikerjakan oleh: Xirus79
+Commit: 1cd48be, 4 Nov 2026",5,Done,Sprint 2,capstone
+122,Story,Perbaikan service gambar produk,"Perbaiki ProductImage service dan tambah test fitur; aset gambar menu di public/assets/images/menu.
+
+Dikerjakan oleh: willsyh
+Commit: belum di-commit",5,In Progress,Sprint 2,capstone
+123,Story,Ekspor laporan Excel & PDF,"Rekap penjualan dapat diekspor ke .xlsx dan PDF.
+
+Dikerjakan oleh: VVNX13
+Commit: f062d45, 13 Okt 2026",6,Done,,capstone
+124,Story,Revisi dashboard owner & laporan statistik,"Perbaikan dashboard owner, laporan statistik, dan detail laporan stok produk.
+
+Dikerjakan oleh: reynaldy234
+Commit: 1aba29e, 4 Nov 2026",6,Done,Sprint 2,capstone
+125,Story,Grafik tren penjualan,"Grafik tren penjualan harian/mingguan/bulanan.
+
+Dikerjakan oleh: Xirus79
+Commit: bdb0feb, 4 Nov 2026",6,Done,Sprint 2,capstone
+126,Story,Analisis produk terlaris (Pareto),"Analisis Pareto 80/20 untuk produk terlaris.
+
+Dikerjakan oleh: Xirus79
+Commit: 296f205, 4 Nov 2026",6,Done,Sprint 2,capstone
+127,Story,Dashboard statistik harian kasir,"Ringkasan transaksi harian di dashboard kasir.
+
+Dikerjakan oleh: reynaldy234
+Commit: 4f4ac2c, 5 Nov 2026",6,Done,Sprint 2,capstone
+128,Story,Desain topbar profesional,"Redesain topbar halaman kasir.
+
+Dikerjakan oleh: reynaldy234
+Commit: 4f4ac2c, 5 Nov 2026",7,Done,Sprint 2,capstone
+129,Story,Ganti emoji dengan ikon SVG,"Mengganti emoji dengan ikon SVG agar tampilan lebih modern.
+
+Dikerjakan oleh: willsyh
+Commit: a188254, 13 Nov 2026",7,Done,Sprint 2,capstone
+130,Story,Perbaiki error dari furqon_branch,"Investigasi dan perbaiki error pada commit 3a1e005 'eror'.
+
+Dikerjakan oleh: Xirus79
+Commit: 3a1e005, 4 Nov 2026",7,To Do,Sprint 2,capstone
+131,Story,Pengujian end-to-end / UAT semua role,"Uji alur pelanggan, kasir, dapur, dan owner dari pesan sampai laporan.",7,To Do,Sprint 2,capstone
+132,Story,Deploy aplikasi ke server produksi,"Deploy sesuai panduan DEPLOY.md (env, database, VAPID, webhook QRIS).",7,To Do,Sprint 2,capstone
+133,Story,Dokumentasi & laporan akhir capstone,"Lengkapi README, panduan pengguna, dan laporan akhir capstone.",7,To Do,Sprint 2,capstone

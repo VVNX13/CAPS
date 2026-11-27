@@ -61,6 +61,47 @@ class ProductImageTest extends TestCase
         );
     }
 
+    public function test_dishes_without_their_own_photo_show_the_placeholder_not_a_borrowed_one(): void
+    {
+        $seeded = 'https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?w=800';
+
+        $withoutOwnPhoto = [
+            'Ayam Bakar Madu Pedas', 'Tahu Cabe Garam Gurih', 'Cireng Crispy Bumbu Rujak',
+            'Mie Goreng Seafood Nusantara', 'Sop Buntut Gurih Rempah',
+            'Berry Sunset Sparkler Mocktail', 'Jus Alpukat Kerok Cokelat', 'Jus Mangga Harum Manis',
+        ];
+
+        foreach ($withoutOwnPhoto as $name) {
+            $this->assertNull(
+                ProductImage::url($seeded, $name),
+                "{$name} tidak boleh memakai foto menu lain (croissant / kentang / kopi)."
+            );
+        }
+
+        // Dishes that do have a matching local photo keep it.
+        $this->assertSame(
+            '/assets/images/ChatGPT-Image-Oct-2_-2026_-09_13_21-PM-7.png',
+            ProductImage::url($seeded, 'Kentang Goreng Truffle Crispy')
+        );
+    }
+
+    public function test_a_dedicated_menu_photo_is_used_once_it_is_in_place(): void
+    {
+        $file = public_path('assets/images/menu/cireng-bumbu-rujak.jpg');
+        $this->assertFileDoesNotExist($file, 'Test ini tidak boleh menimpa foto asli.');
+
+        file_put_contents($file, 'fake');
+
+        try {
+            $this->assertSame(
+                '/assets/images/menu/cireng-bumbu-rujak.jpg',
+                ProductImage::url('https://images.unsplash.com/x', 'Cireng Crispy Bumbu Rujak')
+            );
+        } finally {
+            @unlink($file);
+        }
+    }
+
     public function test_external_detection(): void
     {
         $this->assertTrue(ProductImage::isExternal('http://x.test/a.jpg'));
