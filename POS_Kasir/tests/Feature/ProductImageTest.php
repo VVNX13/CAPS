@@ -61,22 +61,29 @@ class ProductImageTest extends TestCase
         );
     }
 
-    public function test_dishes_without_their_own_photo_show_the_placeholder_not_a_borrowed_one(): void
+    public function test_menu_items_use_their_own_local_photos(): void
     {
         $seeded = 'https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?w=800';
 
-        $withoutOwnPhoto = [
+        $withOwnPhoto = [
             'Ayam Bakar Madu Pedas', 'Tahu Cabe Garam Gurih', 'Cireng Crispy Bumbu Rujak',
             'Mie Goreng Seafood Nusantara', 'Sop Buntut Gurih Rempah',
             'Berry Sunset Sparkler Mocktail', 'Jus Alpukat Kerok Cokelat', 'Jus Mangga Harum Manis',
         ];
 
-        foreach ($withoutOwnPhoto as $name) {
-            $this->assertNull(
-                ProductImage::url($seeded, $name),
-                "{$name} tidak boleh memakai foto menu lain (croissant / kentang / kopi)."
-            );
+        $urls = [];
+        foreach ($withOwnPhoto as $name) {
+            $url = ProductImage::url($seeded, $name);
+            $this->assertStringStartsWith('/assets/images/menu/', $url);
+            $this->assertFileExists(public_path($url));
+            $this->assertSame($url, ProductImage::url(null, $name));
+            $urls[] = $url;
         }
+        $this->assertCount(count($withOwnPhoto), array_unique($urls));
+        $this->assertNotSame(
+            ProductImage::url($seeded, 'Es Kopi Susu Gula Aren'),
+            ProductImage::url($seeded, 'Caramel Macchiato Iced')
+        );
 
         // Dishes that do have a matching local photo keep it.
         $this->assertSame(

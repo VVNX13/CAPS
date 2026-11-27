@@ -43,7 +43,8 @@
             <x-icon name="wifi-off" /> Anda sedang offline. Menu tetap bisa dilihat, tetapi pesanan tidak bisa dikirim sampai koneksi kembali.
         </div>
 
-        <!-- Rekomendasi Menu Pilihan (Top Sales 1 Bulan) -->
+        @if ($recommendations->isNotEmpty())
+        <!-- Rekomendasi berdasarkan transaksi lunas 30 hari terakhir -->
         <section class="customer-rec-section">
             <div class="rec-section-header">
                 <div>
@@ -51,57 +52,43 @@
                         <x-icon name="star" /><span>Rekomendasi Top Sales</span>
                     </div>
                     <h3 class="rec-header-title">Menu Paling Terlaris &amp; Favorit</h3>
-                    <p class="rec-header-desc">Pilihan nomor satu yang paling banyak dipesan pelanggan Taman Cafe.</p>
+                    <p class="rec-header-desc">Menu paling banyak terjual dari transaksi lunas selama 30 hari terakhir.</p>
                 </div>
                 <span class="rec-badge-highlight">Berdasarkan Penjualan</span>
             </div>
 
             <div class="rec-cards-grid">
-                @php
-                    $bestsellerIds = [];
-                    $recItems = [
-                        ['badge' => '#1 Minuman', 'sales' => '480x Terjual', 'name' => 'Kopi Susu Gula Aren', 'desc' => 'Espresso blend Arabika & Robusta lokal, susu creamy, dan gula aren organik murni.', 'price' => 24000, 'img' => 'ChatGPT-Image-Oct-2_-2026_-09_13_15-PM-2.png', 'cat' => 'minuman'],
-                        ['badge' => '#1 Makanan', 'sales' => '310x Terjual', 'name' => 'Nasi Goreng Kampung', 'desc' => 'Nasi goreng bumbu rempah nusantara, telur mata sapi, ayam suwir & kerupuk udang.', 'price' => 38000, 'img' => 'ChatGPT-Image-Oct-2_-2026_-09_13_19-PM-5.png', 'cat' => 'makanan'],
-                        ['badge' => '#1 Snack', 'sales' => '380x Terjual', 'name' => 'Truffle Parmesan Fries', 'desc' => 'Kentang goreng renyah bumbu white truffle oil, taburan keju parmesan melimpah & parsley.', 'price' => 30000, 'img' => 'ChatGPT-Image-Oct-2_-2026_-09_13_21-PM-7.png', 'cat' => 'makanan'],
-                    ];
-                @endphp
-                @foreach ($recItems as $rec)
+                @foreach ($recommendations as $product)
                     @php
-                        $matchedProduct = $products->first(function($p) use ($rec) {
-                            $pName = strtolower($p->name);
-                            if ($rec['cat'] === 'minuman') {
-                                return str_contains($pName, 'gula aren') || str_contains($pName, 'aren') || str_contains($pName, 'kopi');
-                            }
-                            if (str_contains($rec['name'], 'Nasi Goreng')) {
-                                return str_contains($pName, 'nasi goreng');
-                            }
-                            return str_contains($pName, 'kentang') || str_contains($pName, 'truffle');
-                        }) ?? $products->first();
-
-                        $targetId = $matchedProduct ? $matchedProduct->id : 1;
-                        $bestsellerIds[] = $targetId;
-                        $targetPrice = $matchedProduct ? (float) $matchedProduct->price : $rec['price'];
-                        $targetName = $matchedProduct ? $matchedProduct->name : $rec['name'];
-                        $targetCat = $matchedProduct && $matchedProduct->category ? $matchedProduct->category->name : ($rec['cat'] === 'minuman' ? 'Minuman' : 'Makanan');
-                        $targetStock = $matchedProduct ? (int) $matchedProduct->stock : 20;
-                        $targetImgUrl = asset('assets/images/' . $rec['img']);
+                        $targetId = $product->id;
+                        $targetPrice = (float) $product->price;
+                        $targetName = $product->name;
+                        $targetCat = $product->category->name;
+                        $targetStock = (int) $product->stock;
+                        $targetImgUrl = \App\Services\ProductImage::url($product->image, $product->name) ?? '';
+                        $badge = '#' . $loop->iteration . ' Terlaris';
+                        $salesLabel = number_format($product->quantity_sold, 0, ',', '.') . ' porsi terjual';
                     @endphp
                     <div class="rec-card" style="cursor:pointer;"
-                         onclick="openProductPreview(event, { id: {{ $targetId }}, name: @js($targetName), price: {{ $targetPrice }}, image: @js($targetImgUrl), category: @js($targetCat), ownerType: @js($rec['cat']), stock: {{ $targetStock }}, desc: @js($rec['desc']), badge: @js($rec['badge'] . ' · ' . $rec['sales']) })">
+                         onclick="openProductPreview(event, { id: {{ $targetId }}, name: @js($targetName), price: {{ $targetPrice }}, image: @js($targetImgUrl), category: @js($targetCat), ownerType: @js($product->category->owner_type), stock: {{ $targetStock }}, desc: @js((string) $product->description), badge: @js($badge . ' · ' . $salesLabel) })">
                         <div class="rec-card-img-wrap">
-                            <span class="rec-card-badge"><x-icon name="star" /> {{ $rec['badge'] }}</span>
-                            <span class="rec-card-sales-pill">{{ $rec['sales'] }}</span>
-                            <img src="{{ $targetImgUrl }}" alt="{{ $rec['name'] }}" loading="lazy">
+                            <span class="rec-card-badge"><x-icon name="star" /> {{ $badge }}</span>
+                            <span class="rec-card-sales-pill">{{ $salesLabel }}</span>
+                            @if ($targetImgUrl)
+                                <img src="{{ $targetImgUrl }}" alt="{{ $targetName }}" loading="lazy">
+                            @else
+                                <x-icon :name="$product->category->owner_type === 'makanan' ? 'soup' : 'cup-soda'" />
+                            @endif
                         </div>
                         <div class="rec-card-body">
                             <div>
                                 <div class="rec-card-title">{{ $targetName }}</div>
-                                <div class="rec-card-desc">{{ $rec['desc'] }}</div>
+                                <div class="rec-card-desc">{{ $product->description }}</div>
                             </div>
                             <div class="rec-card-footer">
                                 <div class="rec-card-price">{{ rupiah($targetPrice) }}</div>
                                 <button type="button" class="rec-card-btn"
-                                        onclick="event.stopPropagation(); addToCart({{ $targetId }}, @js($targetName), {{ $targetPrice }}, @js($rec['img']), @js($targetCat))">
+                                        onclick="event.stopPropagation(); addToCart({{ $targetId }}, @js($targetName), {{ $targetPrice }}, @js($targetImgUrl), @js($targetCat))">
                                     + Tambah
                                 </button>
                             </div>
@@ -110,6 +97,7 @@
                 @endforeach
             </div>
         </section>
+        @endif
 
         <!-- Search & Sort Bar -->
         <div class="menu-search-wrapper">
