@@ -58,6 +58,7 @@
 
             <div class="rec-cards-grid">
                 @php
+                    $bestsellerIds = [];
                     $recItems = [
                         ['badge' => '#1 Minuman', 'sales' => '480x Terjual', 'name' => 'Kopi Susu Gula Aren', 'desc' => 'Espresso blend Arabika & Robusta lokal, susu creamy, dan gula aren organik murni.', 'price' => 24000, 'img' => 'ChatGPT-Image-Oct-2_-2026_-09_13_15-PM-2.png', 'cat' => 'minuman'],
                         ['badge' => '#1 Makanan', 'sales' => '310x Terjual', 'name' => 'Nasi Goreng Kampung', 'desc' => 'Nasi goreng bumbu rempah nusantara, telur mata sapi, ayam suwir & kerupuk udang.', 'price' => 38000, 'img' => 'ChatGPT-Image-Oct-2_-2026_-09_13_19-PM-5.png', 'cat' => 'makanan'],
@@ -78,6 +79,7 @@
                         }) ?? $products->first();
 
                         $targetId = $matchedProduct ? $matchedProduct->id : 1;
+                        $bestsellerIds[] = $targetId;
                         $targetPrice = $matchedProduct ? (float) $matchedProduct->price : $rec['price'];
                         $targetName = $matchedProduct ? $matchedProduct->name : $rec['name'];
                         $targetCat = $matchedProduct && $matchedProduct->category ? $matchedProduct->category->name : ($rec['cat'] === 'minuman' ? 'Minuman' : 'Makanan');
@@ -108,40 +110,6 @@
                 @endforeach
             </div>
         </section>
-
-        <!-- Rekomendasi Sesuai Preferensi Pelanggan -->
-        <section id="preferenceRecSection" class="customer-rec-section preference-rec-section" style="display:none; margin-top:16px;">
-            <div class="rec-section-header">
-                <div>
-                    <div class="rec-header-badge" style="background:#e0f2fe; color:#0369a1; border-color:#bae6fd;">
-                        <x-icon name="target" /><span>Rekomendasi Pilihanmu</span>
-                    </div>
-                    <h3 class="rec-header-title">Menu Pilihan Sesuai Seleramu</h3>
-                    <p class="rec-header-desc" id="prefActiveTagsLabel">Disaring khusus sesuai preferensi rasa yang Anda pilih.</p>
-                </div>
-                <button type="button" class="btn btn-outline btn-sm" onclick="openPreferenceModal()" style="border-radius:9999px; padding:6px 14px; font-size:0.8rem; font-weight:700;">
-                    <x-icon name="pencil" /> Ubah Selera
-                </button>
-            </div>
-
-            <div class="rec-cards-grid" id="prefCardsGrid">
-                <!-- Di-render oleh JavaScript berdasarkan preferensi -->
-            </div>
-        </section>
-
-        <!-- Banner jika kuisioner dilewati / belum diisi -->
-        <div id="prefInviteBanner" class="pref-invite-banner" style="display:none; margin-top:16px;">
-            <div class="pref-invite-content">
-                <span class="pref-invite-icon"><x-icon name="sparkles" /></span>
-                <div>
-                    <div class="pref-invite-title">Cari menu yang cocok dengan seleramu hari ini?</div>
-                    <div class="pref-invite-sub">Pilih preferensi rasa makanan &amp; minuman favoritmu dalam 3 detik.</div>
-                </div>
-            </div>
-            <button type="button" class="btn btn-primary btn-sm" onclick="openPreferenceModal()" style="white-space:nowrap;">
-                Pilih Selera
-            </button>
-        </div>
 
         <!-- Search & Sort Bar -->
         <div class="menu-search-wrapper">
@@ -394,96 +362,45 @@
         </div>
     </div>
 
-    <!-- Modal Kuisioner Preferensi Pelanggan (Cepat, Ringan & Opsional) -->
-    <div class="modal-overlay" id="preferenceModal" onclick="if(event.target.id==='preferenceModal') skipPreferences()">
-        <div class="modal-box modal-bottom-sheet pref-modal-box" onclick="event.stopPropagation()">
-            <div class="modal-sheet-handle"></div>
-
-            <div class="modal-header pref-modal-header">
-                <div style="display:flex; align-items:center; gap:12px;">
-                    <div class="pref-modal-icon-badge"><x-icon name="sparkles" /></div>
-                    <div>
-                        <h3 style="font-size:1.1rem; font-weight:800; color:var(--text-main); line-height:1.2;">Preferensi Selera Anda</h3>
-                        <p style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">Pilih selera rasa untuk rekomendasi menu yang paling pas (opsional)</p>
-                    </div>
-                </div>
-                <button type="button" class="btn btn-outline modal-close-btn" onclick="skipPreferences()" aria-label="Lewati kuisioner"></button>
-            </div>
-
-            <div class="modal-body pref-modal-body" style="padding:16px 20px 20px;">
-                <!-- Pertanyaan Makanan -->
-                <div class="pref-question-group">
-                    <div class="pref-question-label">
-                        <x-icon name="soup" />
-                        <span>Selera Makanan Favorit</span>
-                        <span class="pref-tag-hint">Bisa pilih lebih dari 1</span>
-                    </div>
-                    <div class="pref-chips-grid">
-                        <button type="button" class="pref-chip" data-pref="pedas" onclick="togglePrefChip(this)">
-                            <span class="pref-chip-emoji"><x-icon name="flame" /></span>
-                            <span class="pref-chip-text">Pedas &amp; Gurih</span>
-                            <span class="pref-chip-check"><x-icon name="check" /></span>
-                        </button>
-                        <button type="button" class="pref-chip" data-pref="gurih" onclick="togglePrefChip(this)">
-                            <span class="pref-chip-emoji"><x-icon name="drumstick" /></span>
-                            <span class="pref-chip-text">Gurih / Crispy</span>
-                            <span class="pref-chip-check"><x-icon name="check" /></span>
-                        </button>
-                        <button type="button" class="pref-chip" data-pref="manis" onclick="togglePrefChip(this)">
-                            <span class="pref-chip-emoji"><x-icon name="candy" /></span>
-                            <span class="pref-chip-text">Manis &amp; Legit</span>
-                            <span class="pref-chip-check"><x-icon name="check" /></span>
-                        </button>
-                        <button type="button" class="pref-chip" data-pref="hangat" onclick="togglePrefChip(this)">
-                            <span class="pref-chip-emoji"><x-icon name="soup" /></span>
-                            <span class="pref-chip-text">Kuah Rempah Hangat</span>
-                            <span class="pref-chip-check"><x-icon name="check" /></span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Pertanyaan Minuman -->
-                <div class="pref-question-group" style="margin-top:18px;">
-                    <div class="pref-question-label">
-                        <x-icon name="cup-soda" />
-                        <span>Ingin Minuman Seperti Apa?</span>
-                        <span class="pref-tag-hint">Bisa pilih lebih dari 1</span>
-                    </div>
-                    <div class="pref-chips-grid">
-                        <button type="button" class="pref-chip" data-pref="segar" onclick="togglePrefChip(this)">
-                            <span class="pref-chip-emoji"><x-icon name="snowflake" /></span>
-                            <span class="pref-chip-text">Dingin &amp; Segar</span>
-                            <span class="pref-chip-check"><x-icon name="check" /></span>
-                        </button>
-                        <button type="button" class="pref-chip" data-pref="kopi" onclick="togglePrefChip(this)">
-                            <span class="pref-chip-emoji"><x-icon name="coffee" /></span>
-                            <span class="pref-chip-text">Kopi Mantap</span>
-                            <span class="pref-chip-check"><x-icon name="check" /></span>
-                        </button>
-                        <button type="button" class="pref-chip" data-pref="creamy" onclick="togglePrefChip(this)">
-                            <span class="pref-chip-emoji"><x-icon name="milk" /></span>
-                            <span class="pref-chip-text">Creamy &amp; Susu</span>
-                            <span class="pref-chip-check"><x-icon name="check" /></span>
-                        </button>
-                        <button type="button" class="pref-chip" data-pref="buah" onclick="togglePrefChip(this)">
-                            <span class="pref-chip-emoji"><x-icon name="citrus" /></span>
-                            <span class="pref-chip-text">Jus Buah Asli</span>
-                            <span class="pref-chip-check"><x-icon name="check" /></span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="modal-footer pref-modal-footer">
-                <button type="button" class="btn btn-outline pref-btn-skip" onclick="skipPreferences()">
-                    Lewati (Lihat Semua)
-                </button>
-                <button type="button" id="btnSavePreferences" class="btn btn-primary pref-btn-submit" onclick="submitPreferences()">
-                    Tampilkan Rekomendasi
-                </button>
-            </div>
-        </div>
+    <!-- Asisten Menu (chat) — dibuka oleh pelanggan sendiri, tidak muncul otomatis -->
+    <div class="assistant-teaser" id="assistantTeaser" hidden>
+        <button type="button" class="assistant-teaser-body" onclick="openAssistant()">
+            Bingung mau pesan apa? Saya bantu carikan menu yang pas.
+        </button>
+        <button type="button" class="assistant-teaser-close" onclick="dismissAssistantTeaser()" aria-label="Tutup">
+            <x-icon name="x" />
+        </button>
     </div>
+
+    <button type="button" class="assistant-fab" id="assistantFab" onclick="openAssistant()"
+            aria-label="Buka asisten menu" aria-controls="assistantPanel" aria-expanded="false">
+        <x-icon name="message-circle" />
+        <span class="assistant-fab-label">Tanya Menu</span>
+    </button>
+
+    <div class="assistant-backdrop" onclick="closeAssistant()" aria-hidden="true"></div>
+    <section class="assistant-panel" id="assistantPanel" role="dialog" aria-label="Asisten Menu Taman Cafe" hidden>
+        <header class="assistant-header">
+            <span class="assistant-avatar"><x-icon name="leaf" /></span>
+            <div class="assistant-title">
+                <strong>Asisten Taman Cafe</strong>
+                <span><span class="assistant-online-dot"></span> Siap membantu memilih menu</span>
+            </div>
+            <button type="button" class="assistant-icon-btn" onclick="resetAssistant()" aria-label="Mulai ulang percakapan" title="Mulai ulang">
+                <x-icon name="refresh" />
+            </button>
+            <button type="button" class="assistant-icon-btn" onclick="closeAssistant()" aria-label="Tutup asisten" title="Tutup">
+                <x-icon name="x" />
+            </button>
+        </header>
+        <div class="assistant-messages" id="assistantMessages" aria-live="polite"></div>
+        <div class="assistant-quick" id="assistantQuick" hidden></div>
+        <form class="assistant-input" onsubmit="submitAssistantText(event)">
+            <input type="text" id="assistantInput" maxlength="120" autocomplete="off"
+                   placeholder="Ketik selera Anda, mis. pedas atau kopi" aria-label="Pesan untuk asisten">
+            <button type="submit" class="assistant-send" aria-label="Kirim"><x-icon name="send" /></button>
+        </form>
+    </section>
 @endsection
 
 @push('scripts')
@@ -504,6 +421,7 @@
         // Lets "Pesan Lagi" on the history page rebuild the cart from ids alone.
         window.__MENU_PRODUCTS__ = @json($reorderCatalog);
         window.__ALL_CATALOG_PRODUCTS__ = @json($catalogProductsJson);
+        window.__BESTSELLER_IDS__ = @json($bestsellerIds);
     </script>
     <script src="{{ asset_versioned('assets/js/customer.js') }}"></script>
     <script>

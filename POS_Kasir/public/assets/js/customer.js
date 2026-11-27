@@ -6,7 +6,7 @@ function initCustomerMenu() {
   renderCartBadge();
   watchConnection();
   applyReorderFromUrl();
-  initCustomerPreferences();
+  initAssistant();
 }
 
 /**
@@ -222,11 +222,13 @@ function renderCartBadge() {
   if (bar && countEl && amountEl) {
     if (count > 0) {
       bar.style.display = 'flex';
+      document.body.classList.add('has-cart-bar');
       countEl.innerText = `${count} Menu Dipilih`;
       amountEl.innerText = formatRupiah(total);
       if (bubble) bubble.innerText = count;
     } else {
       bar.style.display = 'none';
+      document.body.classList.remove('has-cart-bar');
     }
   }
 }
@@ -668,7 +670,9 @@ function addPreviewProductToCart() {
 }
 
 /* ==========================================================================
-   Customer Preference Questionnaire & Recommendation Engine
+   Asisten Menu (chat) — rekomendasi sesuai selera pelanggan.
+   Berjalan sepenuhnya di browser dari katalog yang sudah dimuat halaman,
+   jadi tetap berfungsi offline dan tidak mengirim data ke layanan luar.
    ========================================================================== */
 
 const PREF_KEYWORDS = {
@@ -676,339 +680,458 @@ const PREF_KEYWORDS = {
   gurih: ['gurih', 'crispy', 'krispi', 'rempah', 'truffle', 'fries', 'seafood', 'bakar', 'goreng', 'asin', 'buntut', 'keju'],
   manis: ['manis', 'madu', 'karamel', 'caramel', 'rujak'],
   hangat: ['sop', 'buntut', 'kuah', 'hangat', 'rempah', 'hot', 'mie', 'nasi'],
-  segar: ['segar', 'mocktail', 'sparkler', 'lemon', 'mint', 'dingin', 'jus', 'soda'],
+  segar: ['segar', 'mocktail', 'sparkler', 'lemon', 'mint', 'dingin', 'jus', 'soda', 'iced', 'cold', 'es kopi', 'es teh'],
   kopi: ['kopi', 'espresso', 'americano', 'macchiato', 'cold brew', 'coffee'],
   creamy: ['creamy', 'susu', 'latte', 'alpukat', 'matcha', 'cheese', 'keju'],
   buah: ['jus', 'buah', 'mangga', 'alpukat', 'berry', 'lemon']
 };
 
 const PREF_LABELS = {
-  pedas: 'Pedas & Gurih',
+  pedas: 'Pedas',
   gurih: 'Gurih / Crispy',
-  manis: 'Manis & Legit',
-  hangat: 'Kuah Rempah Hangat',
+  manis: 'Manis',
+  hangat: 'Kuah Hangat',
   segar: 'Dingin & Segar',
-  kopi: 'Kopi Mantap',
+  kopi: 'Kopi',
   creamy: 'Creamy & Susu',
-  buah: 'Jus Buah Asli'
+  buah: 'Jus Buah'
+};
+
+const PREF_ICONS = {
+  pedas: 'flame', gurih: 'drumstick', manis: 'candy', hangat: 'soup',
+  segar: 'snowflake', kopi: 'coffee', creamy: 'milk', buah: 'citrus'
 };
 
 const FOOD_PREFS = new Set(['pedas', 'gurih', 'manis', 'hangat']);
 const DRINK_PREFS = new Set(['segar', 'kopi', 'creamy', 'buah']);
 
-window.__PREF_PRODUCTS_MAP__ = {};
+// Kata yang mungkin diketik pelanggan, dipetakan ke tag selera.
+const PREF_SYNONYMS = {
+  pedas: ['pedas', 'pedes', 'sambal', 'cabe', 'cabai', 'spicy'],
+  gurih: ['gurih', 'crispy', 'krispi', 'renyah', 'goreng', 'asin', 'savory'],
+  manis: ['manis', 'madu', 'sweet', 'legit'],
+  hangat: ['hangat', 'kuah', 'berkuah', 'sop', 'sup', 'soto', 'panas'],
+  segar: ['segar', 'dingin', 'es', 'fresh', 'mocktail', 'soda', 'seger'],
+  kopi: ['kopi', 'coffee', 'espresso', 'americano', 'ngopi'],
+  creamy: ['creamy', 'susu', 'milk', 'latte', 'matcha'],
+  buah: ['jus', 'buah', 'juice', 'mangga', 'alpukat', 'berry']
+};
+
+const ASSISTANT_INTENTS = {
+  food: ['makan', 'makanan', 'lapar', 'laper', 'food'],
+  drink: ['minum', 'minuman', 'haus', 'drink'],
+  bestseller: ['terlaris', 'laris', 'favorit', 'populer', 'best', 'andalan', 'terlaku'],
+  cart: ['keranjang', 'checkout', 'bayar'],
+  thanks: ['makasih', 'terima kasih', 'thanks', 'thank', 'thx', 'tengkyu'],
+  greeting: ['halo', 'hai', 'hi', 'hello', 'pagi', 'siang', 'sore', 'malam', 'permisi']
+};
+
+// Kata umum yang tidak dipakai untuk mencari nama menu.
+const ASSISTANT_STOPWORDS = new Set([
+  'mau', 'ingin', 'pengen', 'pingin', 'yang', 'dong', 'deh', 'ada', 'apa', 'saja', 'aja', 'menu',
+  'rekomendasi', 'rekomen', 'saran', 'tolong', 'carikan', 'cari', 'kak', 'mas', 'mbak', 'buat',
+  'untuk', 'saya', 'aku', 'gue', 'yg', 'enak', 'paling', 'nya', 'sama', 'atau', 'dan', 'pakai', 'pake'
+]);
+
+let assistantProducts = {};
+let assistantFlow = { scope: null, foodTag: null };
+let assistantBusy = false;
+let assistantStarted = false;
 
 function getCatalogProducts() {
-  if (Array.isArray(window.__ALL_CATALOG_PRODUCTS__) && window.__ALL_CATALOG_PRODUCTS__.length > 0) {
-    return window.__ALL_CATALOG_PRODUCTS__;
-  }
+  return Array.isArray(window.__ALL_CATALOG_PRODUCTS__) ? window.__ALL_CATALOG_PRODUCTS__ : [];
+}
 
-  // Fallback: extract directly from DOM product cards
-  const cards = document.querySelectorAll('#productGrid .card-product');
-  const list = [];
-  cards.forEach((card, idx) => {
-    const titleEl = card.querySelector('.card-product-title');
-    const price = parseFloat(card.dataset.price) || 0;
-    const descEl = card.querySelector('.card-product-desc');
-    const imgEl = card.querySelector('.card-product-img');
-    const badgeEl = card.querySelector('.brand-badge');
-    const isFood = badgeEl?.classList.contains('badge-food') || false;
+function isFoodProduct(p) {
+  return p.ownerType === 'makanan';
+}
 
-    const onclickStr = card.getAttribute('onclick') || '';
-    const matchId = onclickStr.match(/id:\s*(\d+)/);
-    const id = matchId ? parseInt(matchId[1], 10) : (idx + 1);
+function scoreProducts(productList, tags) {
+  const scored = [];
+  productList.forEach(product => {
+    let score = 0;
+    const matchedTags = [];
+    const name = (product.name || '').toLowerCase();
+    const desc = (product.desc || '').toLowerCase();
+    const cat = (product.category || '').toLowerCase();
 
-    list.push({
-      id: id,
-      name: titleEl ? titleEl.innerText.trim() : (card.dataset.name || ''),
-      price: price,
-      category: badgeEl ? badgeEl.innerText.trim() : (isFood ? 'Makanan' : 'Minuman'),
-      ownerType: isFood ? 'makanan' : 'minuman',
-      stock: 20,
-      desc: descEl ? descEl.innerText.trim() : '',
-      image: '',
-      imageUrl: imgEl ? imgEl.getAttribute('src') || '' : ''
+    tags.forEach(tag => {
+      let hit = false;
+      (PREF_KEYWORDS[tag] || [tag]).forEach(kw => {
+        if (name.includes(kw)) { score += 6; hit = true; }
+        if (desc.includes(kw)) { score += 3; hit = true; }
+        if (cat.includes(kw)) { score += 1.5; }
+      });
+      if (hit) matchedTags.push(tag);
     });
-  });
 
-  window.__ALL_CATALOG_PRODUCTS__ = list;
-  return list;
-}
+    // "kopi dingin" should rank a cold coffee above a coffee or a cold drink alone.
+    score += Math.max(0, matchedTags.length - 1) * 10;
 
-function initCustomerPreferences() {
-  const status = sessionStorage.getItem('taman_pref_status');
-  if (!status) {
-    // Show modal quickly but smoothly after initial page load
-    setTimeout(() => {
-      openPreferenceModal();
-    }, 380);
-  } else if (status === 'answered') {
-    let tags = [];
-    try {
-      tags = JSON.parse(sessionStorage.getItem('taman_pref_tags') || '[]');
-    } catch (e) {
-      tags = [];
+    if (score > 0) {
+      const reason = matchedTags.map(t => PREF_LABELS[t]).join(' + ');
+      scored.push({ product, score, reason: reason || (isFoodProduct(product) ? 'Menu Pilihan' : 'Minuman Pilihan') });
     }
-    if (tags.length > 0) {
-      applyPreferenceRecommendations(tags, false);
-    } else {
-      showPreferenceInviteBanner();
-    }
-  } else {
-    // status is skipped
-    showPreferenceInviteBanner();
-  }
-}
-
-function openPreferenceModal() {
-  const modal = document.getElementById('preferenceModal');
-  if (!modal) return;
-
-  // Restore active chips if saved
-  let savedTags = [];
-  try {
-    savedTags = JSON.parse(sessionStorage.getItem('taman_pref_tags') || '[]');
-  } catch (e) {}
-
-  document.querySelectorAll('#preferenceModal .pref-chip').forEach(chip => {
-    const pref = chip.dataset.pref;
-    chip.classList.toggle('active', savedTags.includes(pref));
   });
-
-  updatePrefSubmitBtnText();
-
-  modal.classList.add('active');
-  document.body.style.overflow = 'hidden';
+  return scored.sort((a, b) => b.score - a.score);
 }
 
-function closePreferenceModal() {
-  const modal = document.getElementById('preferenceModal');
-  if (modal) {
-    modal.classList.remove('active');
-    document.body.style.overflow = '';
-  }
-}
-
-function skipPreferences() {
-  sessionStorage.setItem('taman_pref_status', 'skipped');
-  closePreferenceModal();
-  showPreferenceInviteBanner();
-  const recSec = document.getElementById('preferenceRecSection');
-  if (recSec) recSec.style.display = 'none';
-}
-
-function togglePrefChip(button) {
-  button.classList.toggle('active');
-  updatePrefSubmitBtnText();
-}
-
-function updatePrefSubmitBtnText() {
-  const count = document.querySelectorAll('#preferenceModal .pref-chip.active').length;
-  const btn = document.getElementById('btnSavePreferences');
-  if (btn) {
-    btn.innerText = count > 0 ? `Tampilkan Rekomendasi (${count})` : 'Tampilkan Rekomendasi';
-  }
-}
-
-function submitPreferences() {
-  const activeChips = Array.from(document.querySelectorAll('#preferenceModal .pref-chip.active'));
-  const tags = activeChips.map(c => c.dataset.pref).filter(Boolean);
-
-  if (tags.length === 0) {
-    showToast('Silakan pilih minimal 1 preferensi, atau klik Lewati');
-    return;
-  }
-
-  sessionStorage.setItem('taman_pref_status', 'answered');
-  sessionStorage.setItem('taman_pref_tags', JSON.stringify(tags));
-  closePreferenceModal();
-  applyPreferenceRecommendations(tags, true);
-}
-
-function showPreferenceInviteBanner() {
-  const banner = document.getElementById('prefInviteBanner');
-  if (banner) banner.style.display = 'flex';
-  const recSec = document.getElementById('preferenceRecSection');
-  if (recSec) recSec.style.display = 'none';
-}
-
-function applyPreferenceRecommendations(tags, shouldScroll) {
-  const banner = document.getElementById('prefInviteBanner');
-  if (banner) banner.style.display = 'none';
-
-  const section = document.getElementById('preferenceRecSection');
-  const grid = document.getElementById('prefCardsGrid');
-  const labelEl = document.getElementById('prefActiveTagsLabel');
-  if (!section || !grid) return;
-
-  const catalog = getCatalogProducts();
-  if (!catalog.length) return;
-
-  // Build active label text
-  const labelParts = tags.map(t => PREF_LABELS[t] || t).filter(Boolean);
-  if (labelEl) {
-    labelEl.innerText = labelParts.length > 0
-      ? `Disaring berdasarkan selera: ${labelParts.join(', ')}.`
-      : 'Disaring khusus berdasarkan preferensi rasa yang Anda pilih.';
-  }
-
-  // Separate food preferences vs drink preferences
+/**
+ * @param {'food'|'drink'|'both'|null} scope
+ * @param {string[]} tags
+ * @returns {{items: {product: object, reason: string}[], matched: boolean}}
+ */
+function recommendProducts(scope, tags) {
+  const available = getCatalogProducts().filter(p => (p.stock || 0) > 0);
+  const foods = available.filter(isFoodProduct);
+  const drinks = available.filter(p => !isFoodProduct(p));
   const foodTags = tags.filter(t => FOOD_PREFS.has(t));
   const drinkTags = tags.filter(t => DRINK_PREFS.has(t));
+  let matched = true;
 
-  const scoreProductsList = (productList, relevantTags) => {
-    const scoredList = [];
-    productList.forEach(product => {
-      let score = 0;
-      const pName = (product.name || '').toLowerCase();
-      const pDesc = (product.desc || '').toLowerCase();
-      const pCat = (product.category || '').toLowerCase();
-      let matchedReason = '';
-
-      relevantTags.forEach(tag => {
-        const kws = PREF_KEYWORDS[tag] || [tag];
-        kws.forEach(kw => {
-          if (pName.includes(kw)) {
-            score += 6;
-            if (!matchedReason) matchedReason = PREF_LABELS[tag] || tag;
-          }
-          if (pDesc.includes(kw)) {
-            score += 3;
-            if (!matchedReason) matchedReason = PREF_LABELS[tag] || tag;
-          }
-          if (pCat.includes(kw)) {
-            score += 1.5;
-          }
-        });
-      });
-
-      if (score > 0) {
-        scoredList.push({
-          product,
-          score,
-          reason: matchedReason || (product.ownerType === 'makanan' ? 'Menu Pilihan' : 'Minuman Pilihan')
-        });
-      }
-    });
-
-    scoredList.sort((a, b) => b.score - a.score);
-    return scoredList;
+  const pick = (list, tagsFor, count, fallbackReason) => {
+    const scored = tagsFor.length ? scoreProducts(list, tagsFor) : [];
+    if (scored.length) return scored.slice(0, count);
+    if (tagsFor.length) matched = false;
+    return list.slice(0, count).map(product => ({ product, reason: fallbackReason }));
   };
 
-  const available = catalog.filter(p => (p.stock || 0) > 0);
-  const allFood = available.filter(p => p.ownerType === 'makanan');
-  const allDrinks = available.filter(p => p.ownerType !== 'makanan');
+  const wantFood = scope === 'food' || scope === 'both' || (!scope && foodTags.length > 0);
+  const wantDrink = scope === 'drink' || scope === 'both' || (!scope && drinkTags.length > 0);
 
-  let topItems = [];
-
-  // CASE 1: Only Food Preferences selected -> Strictly Food ONLY
-  if (foodTags.length > 0 && drinkTags.length === 0) {
-    const scoredFood = scoreProductsList(allFood, foodTags);
-    topItems = scoredFood.length > 0
-      ? scoredFood.slice(0, 4)
-      : allFood.slice(0, 3).map(p => ({ product: p, score: 0, reason: 'Menu Pilihan' }));
-  }
-  // CASE 2: Only Drink Preferences selected -> Strictly Drinks ONLY
-  else if (foodTags.length === 0 && drinkTags.length > 0) {
-    const scoredDrinks = scoreProductsList(allDrinks, drinkTags);
-    topItems = scoredDrinks.length > 0
-      ? scoredDrinks.slice(0, 4)
-      : allDrinks.slice(0, 3).map(p => ({ product: p, score: 0, reason: 'Minuman Pilihan' }));
-  }
-  // CASE 3: Both Food and Drink Preferences selected -> Balanced Top Food + Top Drinks
-  else if (foodTags.length > 0 && drinkTags.length > 0) {
-    const scoredFood = scoreProductsList(allFood, foodTags);
-    const topFoods = scoredFood.length > 0
-      ? scoredFood.slice(0, 2)
-      : allFood.slice(0, 2).map(p => ({ product: p, score: 0, reason: 'Menu Pilihan' }));
-
-    const scoredDrinks = scoreProductsList(allDrinks, drinkTags);
-    const topDrinks = scoredDrinks.length > 0
-      ? scoredDrinks.slice(0, 2)
-      : allDrinks.slice(0, 2).map(p => ({ product: p, score: 0, reason: 'Minuman Pilihan' }));
-
-    topItems = [...topFoods, ...topDrinks];
+  let items;
+  if (wantFood && wantDrink) {
+    items = [...pick(foods, foodTags, 2, 'Menu Pilihan'), ...pick(drinks, drinkTags, 2, 'Minuman Pilihan')];
+  } else if (wantFood) {
+    items = pick(foods, foodTags, 4, 'Menu Pilihan');
+  } else if (wantDrink) {
+    items = pick(drinks, drinkTags, 4, 'Minuman Pilihan');
   } else {
-    // Fallback if tags empty
-    topItems = allFood.slice(0, 2).concat(allDrinks.slice(0, 2)).map(p => ({
-      product: p,
-      score: 0,
-      reason: 'Rekomendasi Spesial'
-    }));
+    items = [...pick(foods, [], 2, 'Rekomendasi Spesial'), ...pick(drinks, [], 2, 'Rekomendasi Spesial')];
   }
+  return { items, matched };
+}
 
-  // Clear map and populate fresh payload
-  window.__PREF_PRODUCTS_MAP__ = {};
+function bestsellerProducts() {
+  const ids = Array.isArray(window.__BESTSELLER_IDS__) ? window.__BESTSELLER_IDS__ : [];
+  const catalog = getCatalogProducts();
+  const seen = new Set();
+  return ids
+    .map(id => catalog.find(p => p.id === id))
+    .filter(p => p && !seen.has(p.id) && seen.add(p.id))
+    .map(product => ({ product, reason: 'Terlaris' }));
+}
 
-  grid.innerHTML = topItems.map(item => {
-    const p = item.product;
-    const isFood = p.ownerType === 'makanan';
-    const badgeText = item.reason;
+function parseAssistantText(text) {
+  const t = text.toLowerCase();
+  const words = t.split(/[^a-z0-9]+/).filter(Boolean);
+  // Short words must match a whole word ("es" must not match "espresso").
+  const has = (term) => (term.includes(' ') || term.length > 4 ? t.includes(term) : words.includes(term));
+  const any = (terms) => terms.some(has);
 
-    window.__PREF_PRODUCTS_MAP__[p.id] = {
-      id: p.id,
-      name: p.name,
-      price: p.price,
-      image: p.imageUrl || '',
-      category: p.category,
-      ownerType: p.ownerType,
-      stock: p.stock,
-      desc: p.desc,
-      badge: badgeText
-    };
+  const tags = Object.keys(PREF_SYNONYMS).filter(tag => any(PREF_SYNONYMS[tag]));
+  const knownWords = new Set([...Object.values(PREF_SYNONYMS).flat(), ...Object.values(ASSISTANT_INTENTS).flat()]);
+  const nameTerms = words.filter(w => w.length >= 3 && !ASSISTANT_STOPWORDS.has(w) && !knownWords.has(w));
+  const nameMatches = nameTerms.length
+    ? getCatalogProducts().filter(p => nameTerms.some(w => (p.name || '').toLowerCase().includes(w)))
+    : [];
 
-    const imgHtml = p.imageUrl
-      ? `<img src="${escapeHtml(p.imageUrl)}" alt="${escapeHtml(p.name)}" loading="lazy">`
-      : `<div class="card-product-img card-product-img-placeholder ${isFood ? 'ph-food' : 'ph-drink'}" style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:2.2rem;"><span class="ph-icon">${icon(isFood ? 'soup' : 'cup-soda')}</span></div>`;
+  return {
+    tags,
+    nameMatches,
+    food: any(ASSISTANT_INTENTS.food),
+    drink: any(ASSISTANT_INTENTS.drink),
+    bestseller: any(ASSISTANT_INTENTS.bestseller),
+    cart: any(ASSISTANT_INTENTS.cart),
+    thanks: any(ASSISTANT_INTENTS.thanks),
+    greeting: any(ASSISTANT_INTENTS.greeting)
+  };
+}
 
-    return `
-      <div class="rec-card" style="cursor:pointer;" onclick="openPrefProductPreview(event, ${p.id})">
-        <div class="rec-card-img-wrap">
-          <span class="rec-card-badge">${escapeHtml(badgeText)}</span>
-          <span class="rec-card-sales-pill">${escapeHtml(p.category || (isFood ? 'Makanan' : 'Minuman'))}</span>
-          ${imgHtml}
-        </div>
-        <div class="rec-card-body">
-          <div>
-            <div class="rec-card-title">${escapeHtml(p.name)}</div>
-            <div class="rec-card-desc">${escapeHtml(p.desc || '')}</div>
-          </div>
-          <div class="rec-card-footer">
-            <div class="rec-card-price">${formatRupiah(p.price)}</div>
-            <button type="button" class="rec-card-btn" onclick="addPrefProductToCart(event, ${p.id})">
-              + Tambah
-            </button>
-          </div>
-        </div>
-      </div>
-    `;
-  }).join('');
+/* ---------- Panel ---------- */
 
-  // Animate grid smoothly on update
-  grid.classList.remove('pref-fade-in');
-  void grid.offsetWidth;
-  grid.classList.add('pref-fade-in');
+function initAssistant() {
+  try {
+    if (sessionStorage.getItem('taman_assistant_teased')) return;
+  } catch (e) { /* storage blocked: still show the hint once per page */ }
 
-  section.style.display = 'block';
+  // A small, dismissible hint next to the button — never a blocking popup.
+  setTimeout(() => {
+    const panel = document.getElementById('assistantPanel');
+    const teaser = document.getElementById('assistantTeaser');
+    if (!teaser || (panel && !panel.hidden)) return;
+    teaser.hidden = false;
+    setTimeout(() => { teaser.hidden = true; }, 9000);
+    try { sessionStorage.setItem('taman_assistant_teased', '1'); } catch (e) {}
+  }, 4000);
+}
 
-  if (shouldScroll) {
-    setTimeout(() => {
-      section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 120);
-    showToast('Rekomendasi selera Anda telah diperbarui!', 'target');
+function dismissAssistantTeaser() {
+  const teaser = document.getElementById('assistantTeaser');
+  if (teaser) teaser.hidden = true;
+}
+
+function openAssistant() {
+  const panel = document.getElementById('assistantPanel');
+  const fab = document.getElementById('assistantFab');
+  if (!panel) return;
+  dismissAssistantTeaser();
+  panel.hidden = false;
+  document.body.classList.add('assistant-open');
+  if (fab) fab.setAttribute('aria-expanded', 'true');
+  if (!assistantStarted) {
+    assistantStarted = true;
+    assistantGreet();
+  }
+  if (window.matchMedia('(min-width: 601px)').matches) {
+    document.getElementById('assistantInput')?.focus();
   }
 }
 
-function openPrefProductPreview(event, id) {
+function closeAssistant() {
+  const panel = document.getElementById('assistantPanel');
+  const fab = document.getElementById('assistantFab');
+  if (panel) panel.hidden = true;
+  document.body.classList.remove('assistant-open');
+  if (fab) {
+    fab.setAttribute('aria-expanded', 'false');
+    fab.focus();
+  }
+}
+
+function resetAssistant() {
+  if (assistantBusy) return;
+  const list = document.getElementById('assistantMessages');
+  if (list) list.innerHTML = '';
+  assistantFlow = { scope: null, foodTag: null };
+  assistantGreet();
+}
+
+/* ---------- Messages ---------- */
+
+function assistantScroll() {
+  const list = document.getElementById('assistantMessages');
+  if (list) list.scrollTop = list.scrollHeight;
+}
+
+function assistantAppend(html, from) {
+  const list = document.getElementById('assistantMessages');
+  if (!list) return null;
+  const row = document.createElement('div');
+  row.className = `assistant-msg assistant-msg-${from}`;
+  row.innerHTML = from === 'bot'
+    ? `<span class="assistant-msg-avatar">${icon('leaf')}</span><div class="assistant-bubble">${html}</div>`
+    : `<div class="assistant-bubble">${html}</div>`;
+  list.appendChild(row);
+  assistantScroll();
+  return row;
+}
+
+function assistantUserSays(text) {
+  assistantAppend(escapeHtml(text), 'user');
+}
+
+/** Show a short typing indicator, then the bot's reply and its quick replies. */
+function assistantBotSays(html, quickReplies = [], extraHtml = '') {
+  assistantBusy = true;
+  setAssistantQuickReplies([]);
+  const typing = assistantAppend('<span class="assistant-typing" aria-label="Mengetik"><i></i><i></i><i></i></span>', 'bot');
+  setTimeout(() => {
+    if (typing) typing.remove();
+    assistantAppend(html + extraHtml, 'bot');
+    setAssistantQuickReplies(quickReplies);
+    assistantBusy = false;
+  }, 450);
+}
+
+function setAssistantQuickReplies(replies) {
+  const box = document.getElementById('assistantQuick');
+  if (!box) return;
+  box.innerHTML = '';
+  replies.forEach(reply => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'assistant-chip';
+    btn.innerHTML = `${reply.icon ? icon(reply.icon) : ''}<span>${escapeHtml(reply.label)}</span>`;
+    btn.addEventListener('click', () => {
+      if (assistantBusy) return;
+      assistantUserSays(reply.label);
+      reply.action();
+    });
+    box.appendChild(btn);
+  });
+  box.hidden = replies.length === 0;
+  assistantScroll();
+}
+
+/* ---------- Conversation ---------- */
+
+function assistantStartReplies() {
+  return [
+    { label: 'Cari makanan', icon: 'soup', action: () => assistantAskTaste('food') },
+    { label: 'Cari minuman', icon: 'cup-soda', action: () => assistantAskTaste('drink') },
+    { label: 'Makanan + minuman', icon: 'utensils', action: () => assistantAskTaste('both') },
+    { label: 'Menu terlaris', icon: 'star', action: assistantShowBestsellers }
+  ];
+}
+
+function assistantAfterResultReplies() {
+  const replies = [{ label: 'Cari lagi', icon: 'refresh', action: assistantAskAgain }];
+  if (Object.keys(cart).length > 0) {
+    replies.push({ label: 'Lihat keranjang', icon: 'shopping-cart', action: assistantOpenCart });
+  }
+  replies.push({ label: 'Menu terlaris', icon: 'star', action: assistantShowBestsellers });
+  return replies;
+}
+
+function assistantGreet() {
+  assistantBotSays(
+    'Halo! Saya asisten menu Taman Cafe. Mau saya bantu carikan menu yang pas dengan selera Anda?'
+      + '<span class="assistant-hint">Pilih di bawah, atau ketik saja, mis. <em>"yang pedas"</em> atau <em>"kopi dingin"</em>.</span>',
+    assistantStartReplies()
+  );
+}
+
+function assistantAskAgain() {
+  assistantFlow = { scope: null, foodTag: null };
+  assistantBotSays('Baik, mau cari apa lagi?', assistantStartReplies());
+}
+
+function tasteReplies(tags, onPick) {
+  return [
+    ...tags.map(tag => ({ label: PREF_LABELS[tag], icon: PREF_ICONS[tag], action: () => onPick(tag) })),
+    { label: 'Apa saja', icon: 'sparkles', action: () => onPick(null) }
+  ];
+}
+
+function assistantAskTaste(scope) {
+  assistantFlow = { scope, foodTag: null };
+  if (scope === 'drink') {
+    assistantBotSays('Minuman seperti apa yang Anda mau?',
+      tasteReplies([...DRINK_PREFS], tag => assistantShowResults('drink', tag ? [tag] : [])));
+    return;
+  }
+  assistantBotSays('Selera makanan apa yang sedang Anda cari?', tasteReplies([...FOOD_PREFS], tag => {
+    if (scope === 'both') {
+      assistantFlow.foodTag = tag;
+      assistantBotSays('Lalu minumannya mau yang seperti apa?', tasteReplies([...DRINK_PREFS], drinkTag => {
+        assistantShowResults('both', [assistantFlow.foodTag, drinkTag].filter(Boolean));
+      }));
+      return;
+    }
+    assistantShowResults('food', tag ? [tag] : []);
+  }));
+}
+
+function assistantProductCards(items) {
+  return `<div class="assistant-products">${items.map(({ product: p, reason }) => {
+    const isFood = isFoodProduct(p);
+    assistantProducts[p.id] = {
+      id: p.id, name: p.name, price: p.price, image: p.imageUrl || '', category: p.category,
+      ownerType: p.ownerType, stock: p.stock, desc: p.desc
+    };
+    const img = p.imageUrl
+      ? `<img src="${escapeHtml(p.imageUrl)}" alt="" loading="lazy">`
+      : `<span class="assistant-product-ph ${isFood ? 'ph-food' : 'ph-drink'}">${icon(isFood ? 'soup' : 'cup-soda')}</span>`;
+    return `
+      <div class="assistant-product" role="button" tabindex="0"
+           onclick="openAssistantProduct(event, ${p.id})" onkeydown="if (event.key === 'Enter') openAssistantProduct(event, ${p.id})">
+        <div class="assistant-product-img">${img}</div>
+        <div class="assistant-product-info">
+          <div class="assistant-product-name">${escapeHtml(p.name)}</div>
+          <div class="assistant-product-reason">${escapeHtml(reason)}</div>
+          <div class="assistant-product-price">${formatRupiah(p.price)}</div>
+        </div>
+        <button type="button" class="assistant-add" onclick="assistantAddToCart(event, ${p.id})" aria-label="Tambah ${escapeHtml(p.name)} ke keranjang">${icon('plus')}</button>
+      </div>`;
+  }).join('')}</div>`;
+}
+
+function assistantShowResults(scope, tags) {
+  const { items, matched } = recommendProducts(scope, tags);
+  if (!items.length) {
+    assistantBotSays('Maaf, menu untuk pilihan itu sedang habis. Mau coba yang lain?', assistantStartReplies());
+    return;
+  }
+  const labels = tags.map(t => PREF_LABELS[t]).filter(Boolean);
+  const intro = !matched
+    ? 'Belum ada menu yang benar-benar cocok, tapi ini pilihan lain yang bisa dicoba:'
+    : labels.length
+      ? `Untuk selera <strong>${escapeHtml(labels.join(' + '))}</strong>, ini yang saya sarankan:`
+      : 'Ini beberapa pilihan favorit kami:';
+  assistantBotSays(intro, assistantAfterResultReplies(), assistantProductCards(items));
+}
+
+function assistantShowBestsellers() {
+  const items = bestsellerProducts();
+  if (!items.length) {
+    assistantShowResults(null, []);
+    return;
+  }
+  assistantBotSays('Ini menu yang paling sering dipesan pelanggan bulan ini:', assistantAfterResultReplies(), assistantProductCards(items));
+}
+
+function assistantOpenCart() {
+  closeAssistant();
+  openCartModal();
+}
+
+function submitAssistantText(event) {
+  event.preventDefault();
+  const input = document.getElementById('assistantInput');
+  const text = (input?.value || '').trim();
+  if (!text || assistantBusy) return;
+  input.value = '';
+  assistantUserSays(text);
+
+  const intent = parseAssistantText(text);
+
+  if (intent.thanks && !intent.tags.length && !intent.nameMatches.length) {
+    assistantBotSays('Sama-sama! Selamat menikmati. Ada lagi yang bisa saya bantu?', assistantAfterResultReplies());
+  } else if (intent.cart) {
+    if (Object.keys(cart).length > 0) {
+      assistantBotSays('Baik, saya bukakan keranjang Anda.', []);
+      setTimeout(assistantOpenCart, 900);
+    } else {
+      assistantBotSays('Keranjang Anda masih kosong. Mau saya carikan menu dulu?', assistantStartReplies());
+    }
+  } else if (intent.nameMatches.length) {
+    const items = intent.nameMatches.slice(0, 4).map(product => ({ product, reason: product.category || 'Menu' }));
+    assistantBotSays('Ini menu yang sesuai dengan yang Anda cari:', assistantAfterResultReplies(), assistantProductCards(items));
+  } else if (intent.tags.length || intent.food || intent.drink) {
+    const scope = intent.food && intent.drink ? 'both' : intent.food ? 'food' : intent.drink ? 'drink' : null;
+    if (!intent.tags.length) {
+      assistantAskTaste(scope);
+    } else {
+      assistantShowResults(scope, intent.tags);
+    }
+  } else if (intent.bestseller) {
+    assistantShowBestsellers();
+  } else if (intent.greeting) {
+    assistantBotSays('Halo juga! Mau cari makanan, minuman, atau keduanya?', assistantStartReplies());
+  } else {
+    assistantBotSays(
+      'Maaf, saya belum menangkap maksudnya. Coba sebut selera Anda, misalnya <em>pedas</em>, <em>manis</em>, <em>kopi</em>, atau <em>jus buah</em>.',
+      assistantStartReplies()
+    );
+  }
+}
+
+function openAssistantProduct(event, id) {
   if (event && event.target && event.target.closest('button')) return;
-  const p = window.__PREF_PRODUCTS_MAP__[id];
+  const p = assistantProducts[id];
   if (p) openProductPreview(event, p);
 }
 
-function addPrefProductToCart(event, id) {
+function assistantAddToCart(event, id) {
   if (event) event.stopPropagation();
-  const p = window.__PREF_PRODUCTS_MAP__[id];
-  if (p) {
-    addToCart(p.id, p.name, p.price, p.image, p.category);
+  const p = assistantProducts[id];
+  if (!p) return;
+  addToCart(p.id, p.name, p.price, p.image, p.category);
+  const btn = event?.currentTarget;
+  if (btn) {
+    btn.innerHTML = icon('check');
+    btn.classList.add('is-added');
+    setTimeout(() => { btn.innerHTML = icon('plus'); btn.classList.remove('is-added'); }, 1400);
   }
 }
