@@ -44,7 +44,7 @@ class ProductImage
         $image = trim((string) $image);
 
         if ($image === '') {
-            return null;
+            return $name ? (self::localIllustrationFor($name) ?: null) : null;
         }
 
         if (self::isExternal($image)) {
@@ -68,6 +68,8 @@ class ProductImage
      * photo of a different dish.
      */
     public const DEDICATED_PHOTOS = [
+        'caramel' => 'caramel-macchiato',
+        'gula aren' => 'es-kopi-susu-gula-aren',
         'ayam bakar' => 'ayam-bakar-madu-pedas',
         'tahu' => 'tahu-cabe-garam',
         'cireng' => 'cireng-bumbu-rujak',
